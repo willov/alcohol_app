@@ -1,0 +1,143 @@
+########## NAME
+alcohol_model
+
+########## METADATA
+timeunit = m
+
+########## MACROS
+
+########## STATES
+d/dt(Vol_Stomach) = + vol_drink_per_time*10 - r2            // dL
+d/dt(Kcal_Liquid) = + vol_drink_per_time*kcal_liquid_per_vol - rKcal_clearance         // kcal [ L * kcal/L = kcal]
+
+d/dt(max_Kcal_Solid) = 0
+d/dt(Kcal_Solid) = r_Kcal_Solid
+
+d/dt(EtOH_Pool) = + r_poolIn*Vol_Stomach - r_poolOut                    //mg
+
+d/dt(Conc_EtOH_Stomach)  =  r_drinkEtOH  - r_poolIn + r_poolOut/Vol_Stomach // mg/dL
+d/dt(Mass_EtOH_Intestines) = + r2*Conc_EtOH_Stomach - r3  - r4          // mg
+
+d/dt(Blood_Conc) =  + (r3/V_Blood) - r5*(V_Liver/V_Blood)               //mg/dL 
+
+d/dt(Plasma_acetate) = + r5 - r6                  //mg/dL  
+
+d/dt(PEth) = rPEth - rPEth_bound + rPEth_release - rPEth_clearance 
+d/dt(PEth_Bound) =  rPEth_bound - rPEth_release
+
+d/dt(mod) = 0
+d/dt(time_elapsed)=1
+
+Vol_Stomach(0) = 0.001
+Kcal_Liquid(0) = 0
+max_Kcal_Solid(0) = 0
+Kcal_Solid(0) = 0
+EtOH_Pool(0) = 0
+Conc_EtOH_Stomach(0) = 0
+Mass_EtOH_Intestines(0) = 0
+Blood_Conc(0)=0
+Plasma_acetate(0) = 0
+PEth(0) = 0
+PEth_Bound(0) = 0
+Kcal_remain(0)=0
+mod(0)=0.0
+time_elapsed(0) = 0
+
+########## PARAMETERS
+kPEth = 1
+kPEth_out = 1
+kPEth_bind = 1
+kPEth_release = 1
+
+k_poolIn = 1
+k_poolOut = 1
+
+Vmax = 1
+km  = 1
+k_kcal = 1
+
+k3  = 1
+k4  = 0.5
+
+k6 = 1
+
+VmaxADH    = 1
+VmaxCYP2E1 = 1
+
+KmADH     = 1 // based on literature values 
+KmCYP2E1  = 1 // based on literature values 
+
+k_Kcal = 1
+
+########## VARIABLES
+SS_vol = 0.001
+
+V_Liver = 15
+V_Blood = ((1-sex)*(0.3561 * height^3 + 0.03308 * weight + 0.1833) + sex*(0.3669 * height^3 + 0.03219 * weight + 0.6041))*10 // dL     Nadler's Equation for total blood volume
+
+conc_drink = (EtOH_conc*789.1) //mg/dL
+
+vADH = (VmaxADH*Blood_Conc/( KmADH + Blood_Conc))           
+vCYP2E1 = (VmaxCYP2E1*Blood_Conc/( KmCYP2E1 + Blood_Conc))  
+
+kcal_solid_vol = max(1,Kcal_Solid)/(4*100) // 4kcal/g assumes 1g/ml, 100 scales ml--> dL 
+
+// Model reactions
+r2 = Vmax*( (Vol_Stomach-SS_vol)/((Vol_Stomach-SS_vol) + km) ) * exp( - max(0, Kcal_Liquid)/k_kcal )
+
+r_Kcal_Solid = (max_Kcal_Solid * -1.88 * 0.010* (0.010*max(0, time_elapsed))^0.86  * exp(-(0.010*max(0, time_elapsed))^1.86))    // doi: 10.1016/S0002-9270(00)00868-6
+
+r_poolIn  = gt(Vol_Stomach, 2*SS_vol) * gt(Kcal_Solid, 1e-3) * max(0, (Conc_EtOH_Stomach - EtOH_Pool/kcal_solid_vol) * k_poolIn)
+r_poolOut =  gt(Vol_Stomach, 2*SS_vol) * gt(Kcal_Solid, 1e-3) * EtOH_Pool * k_poolOut
+
+r_drinkEtOH = (conc_drink - Conc_EtOH_Stomach)*(vol_drink_per_time*10/Vol_Stomach)
+
+r3 = Mass_EtOH_Intestines*k3 
+r4 = Mass_EtOH_Intestines*k4
+
+r5  = vADH + vCYP2E1
+
+r6 = Plasma_acetate*k6
+
+rPEth = kPEth*Blood_Conc
+rPEth_clearance = kPEth_out*PEth
+rPEth_bound = kPEth_bind*PEth
+rPEth_release = max(0, kPEth_release*( PEth_Bound - PEth ))
+
+vol = vol_drink_per_time*drink_length
+kcal = kcal_liquid_per_vol*vol
+
+rKcal_clearance = Kcal_Liquid*k_Kcal
+
+
+########## FUNCTIONS
+
+########## EVENTS
+event1 = gt(vol_drink_per_time,0), mod, 0.00001
+event2 = le(vol_drink_per_time,0), mod, 0
+kcal_event = gt(kcal_solid,0), max_Kcal_Solid, kcal_solid+Kcal_Solid, Kcal_Solid, kcal_solid+Kcal_Solid, time_elapsed, 0 
+event_kcal2 = le(Kcal_Solid, 0), Kcal_Solid, 0, max_Kcal_Solid, 0, EtOH_Pool, 0
+
+########## OUTPUTS
+
+########## INPUTS
+EtOH_conc           = EtOH_conc           @ 0
+vol_drink_per_time  = vol_drink_per_time  @ 0
+kcal_liquid_per_vol = kcal_liquid_per_vol @ 0
+kcal_solid          = kcal_solid          @ 0
+drink_length = drink_length @ 0
+
+sex                 = sex                 @ 1       // male=1, female=0
+weight              = weight              @ 104     // Kg
+height              = height              @ 1.85    // m
+
+########## FEATURES
+
+Blood alcohol concentration (mg/dL) = Blood_Conc   // mg/dL
+Blood alcohol concentration (‰) = Blood_Conc/100   // mg/dL
+Acetate in plasma (mM) = Plasma_acetate/10.2                              //mg/dL --> mM
+Breath alcohol concentration (g/210L) = (0.840*(Blood_Conc/1000) + 0.00367)*210                // BrAC [g/210L = 0.840*BAC[g/dL]+0.00367 => 1e-3*g/dL]
+Breath alcohol concentration (g/L) = ( 0.840*(Blood_Conc/1000) + 0.00367 )    // g/L [g/210L * 1/210 * 2100 = g/L * 2100 = g/L * scale] // 10 cause Blood_Conc is in /dL and needs to be scaled up to /L
+Gastric volume (mL) = Vol_Stomach*100
+PEth (ng/mL) = PEth
+
