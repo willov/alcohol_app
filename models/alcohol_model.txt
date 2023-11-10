@@ -104,9 +104,6 @@ rPEth_clearance = kPEth_out*PEth
 rPEth_bound = kPEth_bind*PEth
 rPEth_release = max(0, kPEth_release*( PEth_Bound - PEth ))
 
-vol = vol_drink_per_time*drink_length
-kcal = kcal_liquid_per_vol*vol
-
 rKcal_clearance = Kcal_Liquid*k_Kcal
 
 
