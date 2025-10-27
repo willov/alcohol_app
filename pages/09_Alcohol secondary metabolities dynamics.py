@@ -145,25 +145,6 @@ if n_meals < 1.0:
 meal_times = [t+(30/60)*on for t in meal_times for on in [0,1]]
 meal_kcals = [0]+[m*on for m in meal_kcals for on in [1 , 0]]
 
-# Setup urination
-st.subheader("Urination")
-
-n_urinations = st.slider("Number of urinations:", 0, 20, 0)
-urination_times = []
-
-# default start time for the first urination editor
-_start_ur_time = 18.0
-for i in range(n_urinations):
-    st.markdown(f"**Urination {i+1}**")
-    urination_times.append(st.number_input("Time of urination (h): ", 0.0, 100.0, _start_ur_time, 0.1, key=f"urination_time{i}"))
-    _start_ur_time += 1
-    st.divider()
-
-# Create piecewise pulse: for each urination time u -> [u, u+0.01] with values [1,0]
-delta = 0.01
-urination_t = [t + delta*on for t in urination_times for on in [0,1]]
-urination_f = [0] + [v for _ in urination_times for v in [1,0]]
-
 # Setup stimulation to the model
 
 stim = {
@@ -172,7 +153,6 @@ stim = {
     "kcal_liquid_per_vol": {"t": t, "f": kcal_liquid_per_vol},
     "drink_length": {"t": t, "f": drink_length},
     "kcal_solid": {"t": meal_times, "f": meal_kcals},
-    "urination": {"t": urination_t, "f": urination_f},
     }
 
 # Plotting the drinks
