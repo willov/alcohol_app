@@ -2,7 +2,7 @@
 alcohol_model
 
 ########## METADATA
-timeunit = m
+time_unit = m
 
 ########## MACROS
 
@@ -25,7 +25,6 @@ d/dt(Plasma_acetate) = + r5 - r6                  //mg/dL
 d/dt(PEth) = rPEth - rPEth_bound + rPEth_release - rPEth_clearance 
 d/dt(PEth_Bound) =  rPEth_bound - rPEth_release
 
-d/dt(mod) = 0
 d/dt(time_elapsed)=1
 
 Vol_Stomach(0) = 0.001
@@ -39,8 +38,6 @@ Blood_Conc(0)=0
 Plasma_acetate(0) = 0
 PEth(0) = 0
 PEth_Bound(0) = 0
-Kcal_remain(0)=0
-mod(0)=0.0
 time_elapsed(0) = 0
 
 ########## PARAMETERS
@@ -110,8 +107,6 @@ rKcal_clearance = Kcal_Liquid*k_Kcal
 ########## FUNCTIONS
 
 ########## EVENTS
-event1 = gt(vol_drink_per_time,0), mod, 0.00001
-event2 = le(vol_drink_per_time,0), mod, 0
 kcal_event = gt(kcal_solid,0), max_Kcal_Solid, kcal_solid+Kcal_Solid, Kcal_Solid, kcal_solid+Kcal_Solid, time_elapsed, 0 
 event_kcal2 = le(Kcal_Solid, 0), Kcal_Solid, 0, max_Kcal_Solid, 0, EtOH_Pool, 0
 

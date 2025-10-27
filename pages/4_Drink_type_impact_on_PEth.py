@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -9,19 +10,18 @@ import plotly.graph_objects as go
 # Install sund in a custom location
 import subprocess
 import sys
+Path("./custom_package").mkdir(parents=True, exist_ok=True)
 if "sund" not in os.listdir('./custom_package'):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'https://isbgroup.eu/edu/assets/sund-1.0.1.tar.gz#sha256=669a1d05c5c8b68500086e183d831650277012b3ea57e94356de1987b6e94e3e'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'sund<3.0"'])
 
 sys.path.append('./custom_package')
 import sund
 
-st.elements.utils._shown_default_value_warning=True # This is not a good solution, but it hides the warning of using default values and sessionstate api
-
 # Setup the models
 
 def setup_model(model_name):
-    sund.installModel(f"./models/{model_name}.txt")
-    model_class = sund.importModel(model_name)
+    sund.install_model(f"./models/{model_name}.txt")
+    model_class = sund.import_model(model_name)
     model = model_class() 
 
     fs = []
@@ -34,8 +34,8 @@ def setup_model(model_name):
         param_in = json.load(f)
         params = param_in['x']
 
-    model.parametervalues = params
-    features = list(model.featurenames)
+    model.parameter_values = params
+    features = list(model.feature_names)
     return model, features
 
 model, model_features = setup_model('alcohol_model')
@@ -46,24 +46,21 @@ def flatten(list):
     return [item for sublist in list for item in sublist]
 
 def simulate(m, anthropometrics, stim, extra_time = 10):
-    act = sund.Activity(timeunit = 'h')
-    pwc = sund.PIECEWISE_CONSTANT # space saving only
-    const = sund.CONSTANT # space saving only
+    act = sund.Activity(time_unit = 'h')
 
     for key,val in stim.items():
-        act.AddOutput(name = key, type=pwc, tvalues = val["t"], fvalues = val["f"]) 
+        act.add_output(name = key, type='piecewise_constant', t = val["t"], f = val["f"]) 
     for key,val in anthropometrics.items():
-        act.AddOutput(name = key, type=const, fvalues = val) 
+        act.add_output(name = key, type='constant', f = val) 
     
-    sim = sund.Simulation(models = m, activities = act, timeunit = 'h')
+    sim = sund.Simulation(models = m, activities = act, time_unit = 'h')
     
-    sim.ResetStatesDerivatives()
     t_start = min(stim["EtOH_conc"]["t"]+stim["kcal_solid"]["t"])-0.25
 
-    sim.Simulate(timevector = np.linspace(t_start, max(stim["EtOH_conc"]["t"])+extra_time, 10000))
+    sim.simulate(time = np.linspace(t_start, max(stim["EtOH_conc"]["t"])+extra_time, 10000))
     
-    sim_results = pd.DataFrame(sim.featuredata,columns=sim.featurenames)
-    sim_results.insert(0, 'Time', sim.timevector)
+    sim_results = pd.DataFrame(sim.feature_values,columns=sim.feature_names)
+    sim_results.insert(0, 'Time', sim.time_vector)
 
     t_start_drink = min(stim["EtOH_conc"]["t"])-0.25
 

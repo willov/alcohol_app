@@ -3,5 +3,5 @@
 !assets/*.png
 *.mex*
 *.asv
-Pipfile
+.venv/
 custom_package/

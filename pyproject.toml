@@ -1,0 +1,12 @@
+[project]
+name = "alcohol-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pip>=25.3",
+    "plotly>=6.3.1",
+    "scipy>=1.16.2",
+    "streamlit>=1.50.0",
+]

@@ -1,14 +1,14 @@
 
+from pathlib import Path
 import streamlit as st
 
 # Install sund in a custom location
 import subprocess
 import sys
 import os 
-
+Path("./custom_package").mkdir(parents=True, exist_ok=True)
 if "sund" not in os.listdir('./custom_package'):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'https://isbgroup.eu/edu/assets/sund-1.0.1.tar.gz#sha256=669a1d05c5c8b68500086e183d831650277012b3ea57e94356de1987b6e94e3e'])
-
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'sund<3.0'])
 
 st.title("A physiological-twin for alcohol consumption: connecting short-term drinking habits to plasma PEth")
 st.markdown("""Current models for alcohol dynamics lack detailed dynamics of e.g., gastric emptying. 
