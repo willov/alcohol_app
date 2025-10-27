@@ -161,7 +161,7 @@ for i in range(n_urinations):
 
 # Create piecewise pulse: for each urination time u -> [u, u+0.01] with values [1,0]
 delta = 0.01
-urination_t = [0] + [u + delta*on for u in urination_times for on in [0,1]]
+urination_t = [u + delta*on for u in urination_times for on in [0,1]]
 urination_f = [0] + [v for _ in urination_times for v in [1,0]]
 
 # Setup stimulation to the model
