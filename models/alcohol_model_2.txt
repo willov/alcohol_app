@@ -225,25 +225,14 @@ urinate             = urinate                       @ 0
 ########## FEATURES
 
 EtOH = Blood_Conc_Peripheral                [mg/dL]
-EtOH_promille = Blood_Conc_Peripheral/105   [‰]      // [1 promille = 1.05 mg/ml = 105 mg/dL --> x mg/dL = x/105 promille]
-BrAC_g_dL = Blood_Conc_Central/1000         [g/dL]   // used in Javors - BrAC was measured, but the estimated BAC [g/dL] was reported -- [mg/dL = 1e-3g/dL]
+EtOH_promille = Blood_Conc_Peripheral/105   [‰]
 
-Acetate = Plasma_acetate/10.2               						[mM]  //mg/dL --> mM
+Acetate = Plasma_acetate/10.2               						[mM]
 BrAC_g_210L = 0.840*(Blood_Conc_Central/1000) + 0.00367             [g/210L]
-BrAC_mg_L = (10/2.1)*( 0.840*(Blood_Conc_Central/1000) + 0.00367 )  [mg/L]  // [g/210L = 1000 mg/210L = 1000/210 mg/L = 10/2.1 mg/L]
+BrAC_mg_L = (10/2.1)*( 0.840*(Blood_Conc_Central/1000) + 0.00367 )  [mg/L]
 
 Gastric volume = Vol_Stomach*1000           [mL]
 PEth = PEth                                 [ng/mL]
 UAC = (Urine_Mass_EtOH/Urine_Volume)        [mg/dL]
 EtG = Peripheral_EtG                        [mg/dL]
 EtS = Peripheral_EtS                        [mg/dL]
-
-EtOH_Central = Blood_Conc_Central           [mg/dL]
-
-// reactions for adhoc
-r_ADH    = vADH1*V_Liver                    [mg]
-r_CYP2E1 = vCYP2E1*V_Liver                  [mg]
-r_UAC    = (r_urine - r_urine_return)       [mg]
-r_EtG    = r_EtG*V_Liver                    [mg]
-r_EtS    = r_EtS*V_Liver                    [mg]
-r_PEth   = r_PEth*1e-4*V_Blood_Peripheral   [mg]  // 1e-4 scales the concentration from [mg/dL] to [ng/mL] --> [10^-6 mg/10^-2 dL = 10^-4 ng/mL]
