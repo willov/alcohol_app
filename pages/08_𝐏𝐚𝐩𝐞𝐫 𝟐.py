@@ -1,7 +1,5 @@
 import streamlit as st
 
-st.markdown("# Paper 2")
-
 st.markdown("""
 ## Coming Soon
 

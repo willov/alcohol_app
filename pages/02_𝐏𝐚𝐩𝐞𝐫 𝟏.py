@@ -1,7 +1,5 @@
 import streamlit as st
 
-st.markdown("# Paper 1")
-
 st.markdown("""
 ## A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth
 
