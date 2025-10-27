@@ -1,0 +1,249 @@
+########## NAME
+alcohol_model_2
+
+########## METADATA
+time_unit = m
+
+########## MACROS
+
+########## STATES
+// gastric emptying
+d/dt(Vol_Stomach) = + vol_drink_per_time - r_Vol_emptying // L
+
+// Liquid kcal
+d/dt(Kcal_Liquid) = + vol_drink_per_time*kcal_liquid_per_vol                                                // kcal [ L * kcal/L = kcal]
+d/dt(Kcal_remain) = + vol_drink_per_time*kcal_liquid_per_vol - r_Vol_emptying*stomach_kcal_liquid_per_vol   // kcal [ L * kcal/L = kcal]
+
+// solid kcal
+d/dt(max_Kcal_Solid) = 0
+d/dt(Kcal_Solid) = - r_digestion
+
+// Gastric conc
+d/dt(EtOH_Pool) = + r_poolIn*Vol_Stomach - r_poolOut 								// mg
+d/dt(Stomach_Conc) = r_drinkEtOH - r_poolIn + r_poolOut/Vol_Stomach - r_stomachADH  // mg/L
+
+// Intestines
+d/dt(Mass_EtOH_Intestines) = + r_Vol_emptying*Stomach_Conc - r_EtOH_uptake          // mg
+
+// Blood and tissue
+d/dt(Blood_Conc_Central)  =  + (r_EtOH_uptake/V_Blood_Central) - r_circulation      //mg/dL 
+d/dt(Blood_Conc_Peripheral)  =  + r_circulation*(V_Blood_Central/V_Blood_Peripheral) - r_Tissue_Peripheral - r_Liver + (r_urine_return - r_urine_minimal_mass - r_urine)/V_Blood_Peripheral    //mg/dL 
+d/dt(Tissue_Conc) =  r_Tissue_Peripheral*(V_Blood_Peripheral/V_Tissue)
+d/dt(Liver_Conc)  =  r_Liver*(V_Blood_Peripheral/V_Liver) - r_EtOH_Elimination - r_EtG - r_EtS      //mg/dL 
+
+// Metabolites
+d/dt(Liver_EtG) = r_EtG - r_EtG_Liver_Peripheral
+d/dt(Peripheral_EtG) = r_EtG_Liver_Peripheral*(V_Liver/V_Blood_Peripheral) - r_EtG_urine    // mg/dL
+d/dt(Liver_EtS) = r_EtS - r_EtS_Liver_Peripheral                                            // mg/dL
+d/dt(Peripheral_EtS) = r_EtS_Liver_Peripheral*(V_Liver/V_Blood_Peripheral) - r_EtS_urine    // mg/dL
+d/dt(Plasma_acetate) = + r_EtOH_Elimination - r_acetate                                     //mg/dL  
+
+// Dynamics of water transportation
+d/dt(Tissue_extra_water) = r_Vol_emptying*10 - r_Tissue_urine               //dL
+d/dt(Vasopressin) = r_vasopressin_influx - r_vasopressin_clearance
+
+// Urine dynamics
+d/dt(Urine_Mass_EtOH) = r_urine_minimal_mass + r_urine - r_urine_return     // mg
+d/dt(Urine_Volume) = r_urine_minimal_vol + r_Tissue_urine                   // dL
+d/dt(Urine_Mass_EtG) = r_EtG_urine*V_Blood_Peripheral                       // mg
+d/dt(Urine_Mass_EtS) = r_EtS_urine*V_Blood_Peripheral                       // mg
+
+// PEth
+d/dt(PEth) = r_PEth - r_PEth_bound + r_PEth_release - r_PEth_clearance 
+d/dt(PEth_Bound) =  r_PEth_bound - r_PEth_release
+
+// state to keep track of the time that has passed since the last meal
+d/dt(time_elapsed)=1
+
+// Definition of initial values
+Vol_Stomach(0)           = SS_vol
+Kcal_Liquid(0)           = 0
+Kcal_remain(0)           = 0
+max_Kcal_Solid(0)        = 0
+Kcal_Solid(0)            = 0
+EtOH_Pool(0)             = 0
+Stomach_Conc(0)          = 0
+Mass_EtOH_Intestines(0)  = 0
+Blood_Conc_Central(0)    = 0
+Blood_Conc_Peripheral(0) = 0
+Tissue_Conc(0)           = 0
+Liver_Conc(0)            = 0
+Liver_EtG(0)             = 0
+Peripheral_EtG(0)        = 0
+Liver_EtS(0)             = 0
+Peripheral_EtS(0)        = 0
+Plasma_acetate(0)        = 0
+Tissue_extra_water(0)    = 0
+Vasopressin(0)           = k_basal_vasopressin/k_clearance_vasopressin
+Urine_Mass_EtOH(0)       = 0
+Urine_Volume(0)          = SS_urine_vol
+Urine_Mass_EtG(0)        = 0
+Urine_Mass_EtS(0)        = 0
+PEth(0)                  = 0
+PEth_Bound(0)            = 0
+time_elapsed(0)          = 0
+
+########## PARAMETERS
+VmaxGastric             = 0.10028847533601028
+KmGastric               = 0.8115471295053232
+k_kcalscaling           = 0.026009077044725923
+km_kcal                 = 7219.025648168511
+n_kcal                  = 2.9350431505014307
+k_poolIn                = 0.049215056963481905
+k_poolOut               = 0.00011026963373147828
+VmaxADHSto              = 383.0316652068957
+KmADHSto                = 1750.8565753331234
+k_EtOHuptake            = 0.05085931578651339
+k_equalize              = 3.364285096106452
+k_equalize_liver        = 0.5664934932515018
+VmaxADH1                = 7.490115599723829
+VmaxCYP2E1              = 0.7715882956131286
+KmADH1                  = 2.13180346563429
+KmCYP2E1                = 45.98540429542478
+k_food_clearance        = 0.1350242774593947
+k_acetate               = 1.1650870599405063
+k_blood_plasma_ratio    = 0.6871729866586396
+k_urine_water           = 5.961711956546037
+k_basal_vasopressin     = 0.3849587409310818
+k_vasopressin_BAC       = 74740.43401768291
+k_clearance_vasopressin = 0.0006626630440471179
+k_kidney_permability    = 2.5215624280668018e-05
+VmaxEtG                 = 0.6461457040480787
+KmEtG                   = 29854.322456892394
+VmaxEtS                 = 0.011876595138349037
+KmEtS                   = 414.40740948670106
+k_EtG_urine             = 0.0024879684263205454
+k_EtS_urine             = 0.014152433882270748
+k_PEth                  = 0.13959486810293995
+k_PEth_clearance        = 0.001460712263112933
+k_PEth_bind             = 0.07805739912357477
+k_PEth_release          = 0.002851044320061577
+
+########## VARIABLES
+// definition of constants
+SS_vol = 0.001		 // L
+SS_urine_vol = 0.05  // dL // Post Void Residual Volume https://www.ncbi.nlm.nih.gov/books/NBK539839/
+
+V_Liver = (18.51 * weight + 191.8)/100  // [ml/100]=dL Vauthey formula 10.1053/jlts.2002.31654
+V_Blood = ((1-sex)*(0.3561 * height^3 + 0.03308 * weight + 0.1833) + sex*(0.3669 * height^3 + 0.03219 * weight + 0.6041))*10 // dL     Nadler's Equation for total blood volume
+V_Blood_Peripheral = 0.85*V_Blood
+V_Blood_Central = 0.15*V_Blood
+V_Plasma_Peripheral = k_blood_plasma_ratio*V_Blood_Peripheral    // k_blood_plasma_ratio is the factor of "accessible" water for EtOH - hemocrit values https://www.ncbi.nlm.nih.gov/books/NBK259/
+
+TBW = ( (1-sex)*( (-2.097+0.1069*(height*100)+0.2466*weight)/0.84 ) + sex*( (2.447-0.09516*age+0.1074*(height*100)+0.3362*weight)/0.84 ) )*10 // rho factor [L/kg] source Watson et.al 10.15288/jsa.1981.42.547
+V_Tissue = TBW - V_Blood - V_Liver + Tissue_extra_water
+
+// reactions governing gastric emptying
+kcal_effect = (1 - (Kcal_Liquid/k_kcalscaling)^n_kcal/( (Kcal_Liquid/k_kcalscaling)^n_kcal + km_kcal^n_kcal) )
+r_Vol_emptying = VmaxGastric*( (Vol_Stomach-SS_vol)/((Vol_Stomach-SS_vol) + KmGastric) ) * kcal_effect
+stomach_kcal_liquid_per_vol     = Kcal_remain/Vol_Stomach
+
+// reactions governing food interactions
+r_digestion = (max_Kcal_Solid * 1.88 * 0.010* (0.010*max(0, time_elapsed))^0.86  * exp(-(0.010*max(0, time_elapsed))^1.86))    // doi: 10.1016/S0002-9270(00)00868-6
+
+kcal_solid_vol = Kcal_Solid/(4*1000) // 4kcal/g assumes 1g/ml, 1000 scales ml--> L
+r_poolIn  = gt(Vol_Stomach, 2*SS_vol) * max(0, (Stomach_Conc - EtOH_Pool/(1/4000 + kcal_solid_vol)) * k_poolIn)
+r_poolOut =  gt(Vol_Stomach, 2*SS_vol) * EtOH_Pool * k_poolOut
+
+// reactions governing EtOH in the stomach
+conc_drink = (EtOH_conc*789.1*10) // mg/L
+r_drinkEtOH = (conc_drink - Stomach_Conc)*(vol_drink_per_time/Vol_Stomach)
+r_stomachADH = VmaxADHSto*(Stomach_Conc / (Stomach_Conc + KmADHSto))
+
+// EtOH uptake from the intestines
+r_EtOH_uptake = Mass_EtOH_Intestines*k_EtOHuptake 
+
+// EtOH distribution from central to peripheral
+r_circulation = k_equalize*(Blood_Conc_Central-Blood_Conc_Peripheral)
+
+// EtOH distribution from peripheral to other tissue
+r_Liver = k_equalize_liver*(Blood_Conc_Peripheral-Liver_Conc)
+r_Tissue_Peripheral = (Blood_Conc_Peripheral-Tissue_Conc)
+
+// EtOH elimination from the liver
+vADH1 = VmaxADH1*(Liver_Conc/( KmADH1 + Liver_Conc)) 
+vCYP2E1 = (VmaxCYP2E1*Liver_Conc/( KmCYP2E1 + Liver_Conc))  
+r_EtOH_Elimination  = (vADH1 + vCYP2E1)*( 1 + k_food_clearance*gt(Kcal_Solid, 1e-3))
+r_EtG  = VmaxEtG*(Liver_Conc/(Liver_Conc + KmEtG)) 
+r_EtS  = VmaxEtS*(Liver_Conc/(Liver_Conc + KmEtS)) 
+
+// EtG and EtS distribution from liver to blood
+r_EtG_Liver_Peripheral = (Liver_EtG - Peripheral_EtG)
+r_EtS_Liver_Peripheral = (Liver_EtS - Peripheral_EtS)
+
+// acetate production
+r_acetate = Plasma_acetate*k_acetate
+
+// Vasopressin dynamics
+r_vasopressin_influx = k_basal_vasopressin/(1 + k_vasopressin_BAC*Blood_Conc_Peripheral)
+r_vasopressin_clearance = Vasopressin*k_clearance_vasopressin
+
+// urine basal volume influx
+r_urine_minimal_vol  = 0.01 // [dL] 1mL is minimal urine production per min
+r_urine_minimal_mass = r_urine_minimal_vol*Blood_Conc_Peripheral // [mg] 
+
+// Uptake of consumed extra water to urine
+r_Tissue_urine       = (Tissue_extra_water/Vasopressin)*k_urine_water // [dL]
+
+// Urine EtOH uptake and leakage
+r_urine = r_Tissue_urine*( (Blood_Conc_Peripheral*V_Blood_Peripheral)/V_Plasma_Peripheral )  // [mg] rescale from BAC to plasma conc
+r_urine_return = k_kidney_permability * Vasopressin * ( (Urine_Mass_EtOH/Urine_Volume) - ((Blood_Conc_Peripheral*V_Blood_Peripheral)/V_Plasma_Peripheral) ) * Urine_Volume  // [mg] plasma-urine conc difference - times volume for mass - less permeable with lower Vasopressin
+
+// Elimination of EtG and EtS from the blood to urine
+r_EtG_urine = k_EtG_urine*Peripheral_EtG
+r_EtS_urine = k_EtS_urine*Peripheral_EtS
+
+// PEth dynamics 
+r_PEth = k_PEth*Blood_Conc_Peripheral
+r_PEth_clearance = k_PEth_clearance*PEth
+r_PEth_bound = k_PEth_bind*PEth
+r_PEth_release = gt(PEth_Bound - PEth, 0) * (k_PEth_release*(PEth_Bound - PEth))
+
+########## FUNCTIONS
+
+########## EVENTS
+new_drink 	  = gt(vol_drink_per_time, 0), Kcal_Liquid, Kcal_remain
+new_meal      = gt(meal_kcal, 0), max_Kcal_Solid, meal_kcal+Kcal_Solid, Kcal_Solid, meal_kcal+Kcal_Solid, time_elapsed, 0 
+food_digested = lt(Kcal_Solid, 0), Kcal_Solid, 0, max_Kcal_Solid, 0
+urinate       = gt(urinate, 0), Urine_Volume, SS_urine_vol, Urine_Mass_EtOH, SS_urine_vol*(Urine_Mass_EtOH/Urine_Volume), Urine_Mass_EtG, SS_urine_vol*(Urine_Mass_EtG/Urine_Volume), Urine_Mass_EtS, SS_urine_vol*(Urine_Mass_EtS/Urine_Volume)
+
+########## OUTPUTS
+
+########## INPUTS
+EtOH_conc           = EtOH_conc                     @ 0
+vol_drink_per_time  = vol_drink_per_time            @ 0
+kcal_liquid_per_vol = kcal_liquid_per_vol           @ 0
+meal_kcal           = kcal_solid                    @ 0
+
+sex                 = sex                           @ 1       // male = 1, female = 0
+weight              = weight                        @ 104     // Kg
+height              = height                        @ 1.85    // m
+age                 = age                           @ 25      // years
+
+urinate             = urinate                       @ 0
+
+########## FEATURES
+
+EtOH = Blood_Conc_Peripheral                [mg/dL]
+EtOH_promille = Blood_Conc_Peripheral/105   [‰]      // [1 promille = 1.05 mg/ml = 105 mg/dL --> x mg/dL = x/105 promille]
+BrAC_g_dL = Blood_Conc_Central/1000         [g/dL]   // used in Javors - BrAC was measured, but the estimated BAC [g/dL] was reported -- [mg/dL = 1e-3g/dL]
+
+Acetate = Plasma_acetate/10.2               						[mM]  //mg/dL --> mM
+BrAC_g_210L = 0.840*(Blood_Conc_Central/1000) + 0.00367             [g/210L]
+BrAC_mg_L = (10/2.1)*( 0.840*(Blood_Conc_Central/1000) + 0.00367 )  [mg/L]  // [g/210L = 1000 mg/210L = 1000/210 mg/L = 10/2.1 mg/L]
+
+Gastric volume = Vol_Stomach*1000           [mL]
+PEth = PEth                                 [ng/mL]
+UAC = (Urine_Mass_EtOH/Urine_Volume)        [mg/dL]
+EtG = Peripheral_EtG                        [mg/dL]
+EtS = Peripheral_EtS                        [mg/dL]
+
+EtOH_Central = Blood_Conc_Central           [mg/dL]
+
+// reactions for adhoc
+r_ADH    = vADH1*V_Liver                    [mg]
+r_CYP2E1 = vCYP2E1*V_Liver                  [mg]
+r_UAC    = (r_urine - r_urine_return)       [mg]
+r_EtG    = r_EtG*V_Liver                    [mg]
+r_EtS    = r_EtS*V_Liver                    [mg]
+r_PEth   = r_PEth*1e-4*V_Blood_Peripheral   [mg]  // 1e-4 scales the concentration from [mg/dL] to [ng/mL] --> [10^-6 mg/10^-2 dL = 10^-4 ng/mL]
