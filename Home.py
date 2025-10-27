@@ -1,37 +1,49 @@
 
-from pathlib import Path
 import streamlit as st
 
-# Install sund in a custom location
-import subprocess
-import sys
-import os 
-Path("./custom_package").mkdir(parents=True, exist_ok=True)
-if "sund" not in os.listdir('./custom_package'):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'sund<3.0'])
+st.write("# Welcome! 👋")
+st.sidebar.success("Select a demo above.")
 
-st.title("A physiological-twin for alcohol consumption: connecting short-term drinking habits to plasma PEth")
-st.markdown("""Current models for alcohol dynamics lack detailed dynamics of e.g., gastric emptying. 
-We have constructed a more detailed model able to both explain differing dynamics of different types of drinks, as well as differences based on anthropometrics. 
-Using the model, we can construct interactive use-cases where you can both simulate the dynamics of different drinks, and long-term clinical markers, personalized based on anthropometrics. The use-cases can be reached from the left sidebar, or using the links below. 
+st.markdown(
+"""
+## A physiological-twin for alcohol consumption and use cases revolving alcohol markers.
 
-[The first use-case revolves around simulating a number of drinks, and observing the dynamics of e.g., ethanol in the blood and breath.](Alcohol_dynamics) 
-Here you can specify anthropometrics, and then define a set of drinks and meals to simulate the dynamics of alcohol. 
+This tool presents interactive demonstrations based on our research on alcohol consumption and its physiological effects. These demonstrations are organized under two main sections (see left sidebar): Paper 1 and Paper 2. These sections provide insights into our findings and methodologies, which are presented in the papers listed below.
 
-The three other use-cases revolve around making long-term predictions of the clinical marker of alcohol use phosphatidyl ethanol (PEth). 
-[Firstly to evaluate if self-reported weekly use of alcohol and measured PEth levels are in agreement](Evaluating_reported_PEth_levels). Secondly, to showcase [how weekly use of alcohol leads to different values of PEth affected by anthropometrics](Anthropometric_differences_in_PEth). Finally, [how different types of drinks affect the PEth levels](Drink_type_impact_on_PEth).
+**👈 Select a demo from the sidebar** to explore interactive demonstrations!
 
-We hope that this model and the applications can be used to make more informed decisions on alcohol consumption.  
+### Paper 1: Interactive demos
 
-Please note that this application is only for research and visualization purposes, and should not be used to make medical decisions. 
-            
-This application is a companion-application to the publication titled \"A physiological-twin for alcohol consumption: connecting short-term drinking habits to plasma PEth\", [available as a preprint on bioRxiv](https://www.biorxiv.org/content/10.1101/2023.08.18.553836). 
-            
-If you use this application, please cite as: 
+The Paper 1 section contains four interactive demonstrations:
+- **Alcohol dynamics** - Simulate drinks and observe dynamics of ethanol in blood and breath
+- **Evaluating reported PEth levels** - Check if self-reported alcohol use matches PEth measurements
+- **Anthropometric differences in PEth** - See how body characteristics affect PEth levels
+- **Drink type impact on PEth** - Compare how different drink types affect PEth
+
+### Paper 2: Coming soon
+
+Additional demonstrations will be added under Paper 2.
+
+---
+
+**Please note:** This application is only for research and visualization purposes, 
+and should not be used to make medical decisions.
+
+### Citation
+
+#### Paper 1
+
+This application is a companion to the publication "A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth.", 
+[available at npj Digital Medicine](https://doi.org/10.1038/s41746-024-01089-6).
+
+If you use this application, please cite as:
 
 > A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth.
-Henrik Podéus, Christian Simonsson, Patrik Nasr, Mattias Ekstedt, Stergios Kechagias, Peter Lundberg, William Lövfors, Gunnar Cedersund.
-bioRxiv 2023.08.18.553836; doi: https://doi.org/10.1101/2023.08.18.553836 
+> Henrik Podéus, Christian Simonsson, Patrik Nasr, Mattias Ekstedt, Stergios Kechagias, Peter Lundberg, William Lövfors, Gunnar Cedersund.
+> Npj Digital Medicine, 7(1), 1–18. doi: https://doi.org/10.1038/s41746-024-01089-6
 
-""")
+#### Paper 2
 
+Citation to paper 2 will be added here when available.
+"""
+)

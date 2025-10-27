@@ -67,7 +67,8 @@ def simulate(m, anthropometrics, stim, extra_time = 10):
 
 # Start the app
 
-st.title("Simulation of alcohol dynamics")
+st.markdown("# Alcohol dynamics")
+st.write("Simulation of alcohol dynamics")
 st.markdown("""Current models for alcohol dynamics lack detailed dynamics of e.g., gastric emptying. 
 We have constructed a more detailed model able to both explain differing dynamics of different types of drinks, as well as differences based on anthropometrics. 
 Using the model, you can simulate the dynamics of different drinks based on custom anthropometrics. 
