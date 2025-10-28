@@ -20,9 +20,11 @@ The Paper 1 section contains four interactive demonstrations:
 - **Anthropometric differences in PEth** - See how body characteristics affect PEth levels
 - **Drink type impact on PEth** - Compare how different drink types affect PEth
 
-### Paper 2: Coming soon
+### Paper 2: Interactive demos
 
-Additional demonstrations will be added under Paper 2.
+The Paper 2 section contains two interactive demonstrations focusing on secondary alcohol metabolites:
+- **Alcohol secondary metabolites dynamics** - Simulate drinks and observe the time course of EtG, EtS, and UAC
+- **Plausibility of behavior** - Evaluate claimed drinking patterns against measured biomarker levels and model uncertainty
 
 ---
 

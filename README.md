@@ -18,7 +18,7 @@ This work presents a detailed mechanistic model for alcohol dynamics, including 
 - Drink type impact on PEth - Compare different drink types
 - Evaluating reported PEth levels - Validate self-reported consumption against measurements
 
-## Paper 2: Predicting secondary alcohol metabolites
+## Paper 2: Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers  
 
 The second work extends the model to include secondary alcohol metabolites: ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC). These biomarkers are important for detecting recent alcohol consumption and have different time profiles than blood alcohol.
 
