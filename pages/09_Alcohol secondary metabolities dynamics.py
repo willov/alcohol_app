@@ -63,7 +63,7 @@ def simulate(m, anthropometrics, stim, extra_time = 10):
 
 st.markdown("# Secondary alcohol metabolites")
 st.write("Simulation of secondary alcohol metabolites")
-st.markdown("""We have constructed a more detailed mechanistic model that involves secondary metabolites, ethyl glucuronide (EtG), ethyl sulphate (EtS), urine alcohol concentration (UAC), able to both explain the profiles of these metabolites following consumption of alcohol. 
+st.markdown("""We have constructed a more detailed mechanistic model that involves secondary metabolites, ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC), able to both explain the profiles of these metabolites following consumption of alcohol. 
 
 Below, you can specify one or more alcoholic drinks, and some anthropometrics to get simulations of the concentration of these metabolites in plasma.
 """)
