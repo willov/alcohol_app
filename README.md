@@ -2,7 +2,7 @@
 
 This repository contains the code for the eHealth application prototype featuring two published works:
 
-## Paper 1: Predicting real-life drinking responses and long-term plasma PEth
+## Paper 1: A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth
 
 <a href="https://doi.org/10.1038/s41746-024-01089-6">
 	<img src="./article-frontpage.png" alt="article-frontpage" width="50%">
