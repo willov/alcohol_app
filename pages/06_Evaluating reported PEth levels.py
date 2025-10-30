@@ -13,7 +13,7 @@ import subprocess
 import sys
 Path("./custom_package").mkdir(parents=True, exist_ok=True)
 if "sund" not in os.listdir('./custom_package'):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", 'sund<3.0"'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", "sund<3.0"])
 
 sys.path.append('./custom_package')
 import sund
