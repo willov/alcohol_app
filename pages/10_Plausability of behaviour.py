@@ -189,8 +189,11 @@ if 'height' not in st.session_state:
 if 'age' not in st.session_state:
     st.session_state['age'] = 30
 
+# Sync sex with showcase selection
+st.session_state['sex'] = showcase_sex
+
 anthropometrics = {"sex": st.session_state['sex'], "weight": st.session_state['weight'], "height": st.session_state['height'], "age": st.session_state['age']}
-anthropometrics["sex"] = st.selectbox("Sex:", ["Man", "Woman"], ["Man", "Woman"].index(st.session_state['sex']), key="sex")
+st.write(f"**Sex:** {showcase_sex} (linked to showcase selection)")
 anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight")
 anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height")
 anthropometrics["age"] = st.number_input("Age (years):", 0, 120, st.session_state.age, key="age")
