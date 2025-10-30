@@ -83,7 +83,7 @@ if 'age' not in st.session_state:
 
 anthropometrics = {"sex": st.session_state['sex'], "weight": st.session_state['weight'], "height": st.session_state['height'], "age": st.session_state['age']}
 anthropometrics["sex"] = st.selectbox("Sex:", ["Man", "Woman"], ["Man", "Woman"].index(st.session_state['sex']), key="sex")
-anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 1000.0, st.session_state.weight, 0.1, key="weight")
+anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight")
 anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height")
 anthropometrics["age"] = st.number_input("Age (years):", 0, 120, st.session_state.age, key="age")
 
@@ -108,9 +108,9 @@ for i in range(n_drinks):
 
     drink_times.append(st.number_input("Time of drink (h): ", 0.0, 100.0, start_time, 0.1, key=f"drink_time{i}"))
     drink_lengths.append(st.number_input("Drink length (min): ", 0.0, 240.0, 20.0, 0.1, key=f"drink_length{i}"))
-    drink_concentrations.append(st.number_input("Concentration of drink (%): ", 0.0, 100.0, 5.0, 0.01, key=f"drink_concentrations{i}"))
+    drink_concentrations.append(st.number_input("Concentration of drink (%): ", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     drink_volumes.append(st.number_input("Volume of drink (L): ", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
-    drink_kcals.append(st.number_input("Kcal of the drink (kcal): ", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
+    drink_kcals.append(st.number_input("Kcal of the drink (kcal): ", 0.0, 1000.0, 45.0, 10.0, key=f"drink_kcals{i}"))
     start_time += 1
     st.divider()
 
@@ -135,7 +135,7 @@ for i in range(n_meals):
     st.markdown(f"**Meal {i+1}**")
 
     meal_times.append(st.number_input("Time of the meal (h): ", 0.0, 100.0, start_time, 0.1, key=f"meal_time{i}"))
-    meal_kcals.append(st.number_input("Kcal of the meal (kcal): ", 0.0, 10000.0, 500.0, 1.0, key=f"meal_kcals{i}"))
+    meal_kcals.append(st.number_input("Kcal of the meal (kcal): ", 0.0, 10000.0, 500.0, 25.0, key=f"meal_kcals{i}"))
     start_time += 6
     st.divider()
 
