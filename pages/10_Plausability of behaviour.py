@@ -302,7 +302,7 @@ if st.session_state['sim_results'] is not None:
             uncert_min = np.array(uncert_data[demo_scenario][mapped_feature]['Min'])
             uncert_median = (uncert_max + uncert_min) / 2
             
-            ax2.fill_between(uncert_time_hours, uncert_min, uncert_max, color=demo_color, alpha=0.25)
+            ax2.fill_between(uncert_time_hours, uncert_min, uncert_max, color=demo_color, alpha=0.25, label='Scenario truth')
     
     # Plot simulation - adjust time to start at 0 (representing 15:00)
     # The simulation time starts at drink time, need to shift to match uncertainty (which starts at 0)
