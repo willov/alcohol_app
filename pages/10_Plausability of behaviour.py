@@ -216,7 +216,7 @@ for i in range(n_drinks):
     with col1:
         drink_times.append(st.number_input("Time (h)", 0.0, 100.0, start_time, 0.1, key=f"drink_time{i}"))
     with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1, key=f"drink_length{i}"))
+        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
     with col3:
         drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:
