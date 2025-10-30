@@ -46,7 +46,7 @@ def load_uncertainty(path="./results/UC_PPL_alcohol_model_individual.json"):
         data = json.load(f)
     return data
 
-def plot_with_uncertainty(ax, uncert_data, scenario_key, feature, color, label=None):
+def plot_with_uncertainty(ax, uncert_data, scenario_key, feature, color, label=None, convert_to_hours=False):
     """Plot median line with shaded uncertainty band."""
     if scenario_key not in uncert_data:
         return
@@ -55,6 +55,8 @@ def plot_with_uncertainty(ax, uncert_data, scenario_key, feature, color, label=N
     
     feat_data = uncert_data[scenario_key][feature]
     time = np.array(feat_data['Time'])
+    if convert_to_hours:
+        time = time / 60.0
     max_val = np.array(feat_data['Max'])
     min_val = np.array(feat_data['Min'])
     median = (max_val + min_val) / 2
@@ -133,7 +135,7 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
     
     # Plot uncertainty band
     if uncert_data and showcase_sex in uncert_data:
-        plot_with_uncertainty(ax, uncert_data, showcase_sex, feat, model_color, label="Model uncertainty")
+        plot_with_uncertainty(ax, uncert_data, showcase_sex, feat, model_color, label="Model uncertainty", convert_to_hours=True)
 
     # Plot measured data points
     if showcase_sex in data_scenarios:
@@ -143,17 +145,18 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
             mean_data = obs_data[feat]['Mean']
             # Filter out NaN values
             valid_idx = [i for i, val in enumerate(mean_data) if not (isinstance(val, float) and np.isnan(val))]
-            time_valid = [time_data[i] for i in valid_idx]
+            time_valid = [time_data[i] / 60.0 for i in valid_idx]  # Convert minutes to hours
             mean_valid = [mean_data[i] for i in valid_idx]
             ax.scatter(time_valid, mean_valid, c='black', s=40, zorder=5, label='Data')
     
     # Apply plotting settings from plotting_info
     ax.set_title(plot_info.get('title', label))
-    ax.set_xlabel(plot_info.get('xlabel', 'Time (minutes)'))
+    ax.set_xlabel('Time (hours)')
     ax.set_ylabel(plot_info.get('ylabel', ylabel if ylabel else ''))
     
     # Set axis limits from plotting_info
     xlim = plot_info.get('xlim', [0, 900])
+    xlim = [x / 60.0 for x in xlim]
     ylim = plot_info.get('ylim')
     ax.set_xlim(xlim)
     if ylim:
@@ -167,9 +170,9 @@ st.pyplot(fig)
 
 # Add drink timeline visualization
 if showcase_sex == "Man":
-    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 15, 30, 45 min | 🍸 Vodka at t=300 min")
+    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 0.25, 0.5, 0.75 h | 🍸 Vodka at t=5 h")
 else:
-    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 15, 30, 45 min | 🍸 Vodka at t=120 min")
+    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 0.25, 0.5, 0.75 h | 🍸 Vodka at t=2 h")
 st.divider()
 
 # === INTERACTIVE DEMO SECTION ===
