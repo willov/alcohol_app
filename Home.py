@@ -1,9 +1,14 @@
 
 import streamlit as st
+from sidebar_config import setup_sidebar
 
-st.write("# Welcome! 👋")
+# Setup sidebar
+setup_sidebar()
+
 st.sidebar.success("Select a demo above.")
 
+# Main content
+st.write("# Welcome! 👋")
 st.markdown(
 """
 ## A physiological-twin for alcohol consumption and use cases revolving alcohol markers.

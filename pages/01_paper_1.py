@@ -1,5 +1,10 @@
 import streamlit as st
+from sidebar_config import setup_sidebar
 
+# Setup sidebar
+setup_sidebar()
+
+# Main content
 st.markdown("""
 ## A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth
 

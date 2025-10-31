@@ -17,7 +17,12 @@ if "sund" not in os.listdir('./custom_package'):
 
 sys.path.append('./custom_package')
 import sund
+from sidebar_config import setup_sidebar
 
+# Setup sidebar
+setup_sidebar()
+
+# Main content
 # Setup the models
 def setup_model(model_name):
     sund.install_model(f"./models/{model_name}.txt")

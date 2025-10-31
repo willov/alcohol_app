@@ -1,5 +1,10 @@
 import streamlit as st
+from sidebar_config import setup_sidebar
 
+# Setup sidebar
+setup_sidebar()
+
+# Main content
 st.markdown("""
 ## Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers  
 
