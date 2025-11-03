@@ -1,4 +1,189 @@
 import streamlit as st
+import json
+import os
+import sys
+from pathlib import Path
+import subprocess
+import numpy as np
+import pandas as pd
+
+
+def setup_sund_package():
+    """Install and setup sund package in custom location."""
+    Path("./custom_package").mkdir(parents=True, exist_ok=True)
+    if "sund" not in os.listdir('./custom_package'):
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", "sund<3.0"])
+    
+    if './custom_package' not in sys.path:
+        sys.path.append('./custom_package')
+    
+    import sund
+    return sund
+
+
+def setup_model(model_name, model_file_path="./models/", param_file_path=None):
+    """Setup a sund model with parameters.
+    
+    - model_name: name of the model (without .txt extension)
+    - model_file_path: directory containing model files (default: ./models/)
+    - param_file_path: path to parameter JSON file. If None, uses default based on model_name
+    
+    Returns: (model_instance, feature_names_list)
+    """
+    import sund
+    
+    sund.install_model(f"{model_file_path}{model_name}.txt")
+    model_class = sund.import_model(model_name)
+    model = model_class()
+    
+    # Determine parameter file path
+    if param_file_path is None:
+        # Use default parameter file naming convention
+        if model_name == "alcohol_model":
+            param_file_path = "./results/alcohol_model (186.99).json"
+        elif model_name == "alcohol_model_2":
+            param_file_path = "./results/alcohol_model_2 (642.74446).json"
+        else:
+            param_file_path = f"./results/{model_name}.json"
+    
+    # Load parameters
+    if os.path.exists(param_file_path):
+        with open(param_file_path, 'r') as f:
+            param_in = json.load(f)
+            params = param_in['x']
+        model.parameter_values = params
+    
+    features = list(model.feature_names)
+    return model, features
+
+
+def simulate(model, anthropometrics, stim, extra_time=10):
+    """Run a sund simulation with given stimuli and anthropometrics.
+    
+    - model: sund model instance
+    - anthropometrics: dict of anthropometric values
+    - stim: dict with keys like "EtOH_conc", "kcal_solid" etc, each with "t" and "f" keys
+    - extra_time: hours to simulate after last event
+    
+    Returns: DataFrame with Time column and all simulated features
+    """
+    import sund
+    
+    act = sund.Activity(time_unit='h')
+    
+    for key, val in stim.items():
+        act.add_output(name=key, type='piecewise_constant', t=val["t"], f=val["f"])
+    
+    for key, val in anthropometrics.items():
+        act.add_output(name=key, type='constant', f=val)
+    
+    sim = sund.Simulation(models=model, activities=act, time_unit='h')
+    
+    t_start = min(stim["EtOH_conc"]["t"] + stim["kcal_solid"]["t"]) - 0.25
+    
+    sim.simulate(time=np.linspace(t_start, max(stim["EtOH_conc"]["t"]) + extra_time, 10000))
+    
+    sim_results = pd.DataFrame(sim.feature_values, columns=sim.feature_names)
+    sim_results.insert(0, 'Time', sim.time_vector)
+    
+    t_start_drink = min(stim["EtOH_conc"]["t"]) - 0.25
+    sim_drink_results = sim_results[(sim_results['Time'] >= t_start_drink)]
+    
+    return sim_drink_results
+
+
+def flatten(nested_list):
+    """Flatten a list of lists into a single list."""
+    return [item for sublist in nested_list for item in sublist]
+
+
+def get_drink_specs(drink_type):
+    """Get specifications for a drink type.
+    
+    Returns: dict with keys: conc, volume, kcal, length
+    """
+    specs = {
+        "Beer": {
+            "conc": 5.1,           # % alcohol
+            "volume": 0.33,        # liters
+            "kcal": 129.827,       # per liter
+            "length": 20           # minutes to drink
+        },
+        "Wine": {
+            "conc": 12.0,
+            "volume": 0.15,
+            "kcal": 133.2526,
+            "length": 20
+        },
+        "Spirit": {
+            "conc": 40.0,
+            "volume": 0.04,
+            "kcal": 10.0,
+            "length": 2
+        }
+    }
+    
+    if drink_type not in specs:
+        raise ValueError(f"Unknown drink type: {drink_type}. Must be one of {list(specs.keys())}")
+    
+    return specs[drink_type]
+
+
+def init_anthropometrics(page_id=None, defaults=None):
+    """Initialize anthropometric session state variables.
+    
+    - page_id: optional page identifier for debugging
+    - defaults: optional dict with keys 'sex', 'weight', 'height', 'age'
+    
+    Returns: dict with anthropometric values
+    """
+    if defaults is None:
+        defaults = {"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30}
+    
+    # Initialize session state
+    if 'sex' not in st.session_state:
+        st.session_state['sex'] = defaults.get('sex', 'Man')
+    if 'weight' not in st.session_state:
+        st.session_state['weight'] = defaults.get('weight', 70.0)
+    if 'height' not in st.session_state:
+        st.session_state['height'] = defaults.get('height', 1.72)
+    if 'age' not in st.session_state:
+        st.session_state['age'] = defaults.get('age', 30)
+    
+    anthropometrics = {
+        "sex": st.session_state['sex'],
+        "weight": st.session_state['weight'],
+        "height": st.session_state['height'],
+        "age": st.session_state['age']
+    }
+    
+    return anthropometrics
+
+
+def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations, 
+                       drink_volumes, drink_kcals, meal_times, meal_kcals):
+    """Build the stimulus dictionary for simulation.
+    
+    Constructs piecewise constant stimuli for alcohol, volume, kcal intake, and meals.
+    
+    Returns: dict with keys EtOH_conc, vol_drink_per_time, kcal_liquid_per_vol, 
+             drink_length, kcal_solid
+    """
+    EtOH_conc = [0] + [c*on for c in drink_concentrations for on in [1, 0]]
+    vol_drink_per_time = [0] + [v/t*on if t > 0 else 0 for v, t in zip(drink_volumes, drink_lengths) for on in [1, 0]]
+    kcal_liquid_per_vol = [0] + [k/v*on if v > 0 else 0 for v, k in zip(drink_volumes, drink_kcals) for on in [1, 0]]
+    drink_length = [0] + [t*on for t in drink_lengths for on in [1, 0]]
+    t = [t + (l/60)*on for t, l in zip(drink_times, drink_lengths) for on in [0, 1]]
+    
+    stim = {
+        "EtOH_conc": {"t": t, "f": EtOH_conc},
+        "vol_drink_per_time": {"t": t, "f": vol_drink_per_time},
+        "kcal_liquid_per_vol": {"t": t, "f": kcal_liquid_per_vol},
+        "drink_length": {"t": t, "f": drink_length},
+        "kcal_solid": {"t": meal_times, "f": meal_kcals},
+    }
+    
+    return stim
 
 
 def prune_session_keys(page, prefix, indices, keys):

@@ -6,44 +6,22 @@ import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
 
-# Install sund in a custom location
-import subprocess
-import sys
-Path("./custom_package").mkdir(parents=True, exist_ok=True)
-if "sund" not in os.listdir('./custom_package'):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", "sund<3.0"])
-
-sys.path.append('./custom_package')
-import sund
 from sidebar_config import setup_sidebar
-from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly, enforce_minimum_time
+from functions.ui_helpers import (
+    setup_sund_package, setup_model, simulate,
+    seed_new_items, on_change_time_propagate, lock_all,
+    draw_drink_timeline_plotly, enforce_minimum_time,
+    init_anthropometrics, build_stimulus_dict
+)
 
-# Setup sidebar
+# Setup sund and sidebar
+sund = setup_sund_package()
 setup_sidebar()
 
-# Main content
-# Setup the models
-
-def setup_model(model_name):
-    sund.install_model(f"./models/{model_name}.txt")
-    model_class = sund.import_model(model_name)
-    model = model_class() 
-
-    with open("./results/alcohol_model_2 (642.74446).json",'r') as f:
-        param_in = json.load(f)
-        params = param_in['x']
-
-    model.parameter_values = params
-    features = model.feature_names
-    return model, features
-
+# Setup the model
 model, model_features = setup_model('alcohol_model_2')
 
-# Define functions needed
-
-def flatten(list):
-    return [item for sublist in list for item in sublist]
-
+# Helper functions for page 08
 def load_uncertainty(path="./results/UC_PPL_alcohol_model_individual.json"):
     """Load uncertainty data from PPL results JSON file."""
     if not os.path.exists(path):
@@ -69,28 +47,6 @@ def plot_with_uncertainty(ax, uncert_data, scenario_key, feature, color, label=N
     
     ax.plot(time, median, color=color, linewidth=2, label=label)
     ax.fill_between(time, min_val, max_val, color=color, alpha=0.25)
-
-def simulate(m, anthropometrics, stim, extra_time = 10):
-    act = sund.Activity(time_unit = 'h')
-
-    for key,val in stim.items():
-        act.add_output(name = key, type='piecewise_constant', t = val["t"], f = val["f"]) 
-    for key,val in anthropometrics.items():
-        act.add_output(name = key, type='constant', f = val) 
-    
-    sim = sund.Simulation(models = m, activities = act, time_unit = 'h')
-    
-    t_start = min(stim["EtOH_conc"]["t"]+stim["kcal_solid"]["t"])-0.25
-
-    sim.simulate(time = np.linspace(t_start, max(stim["EtOH_conc"]["t"])+extra_time, 10000))
-    
-    sim_results = pd.DataFrame(sim.feature_values,columns=sim.feature_names)
-    sim_results.insert(0, 'Time', sim.time_vector)
-
-    t_start_drink = min(stim["EtOH_conc"]["t"])-0.25
-
-    sim_drink_results = sim_results[(sim_results['Time']>=t_start_drink)]
-    return sim_drink_results
 
 # Start the app
 
@@ -188,20 +144,13 @@ st.markdown("Specify your own drinking pattern and anthropometric characteristic
 # Anthropometrics            
 st.subheader("Anthropometrics")
 
-# Shared variables between the pages
-if 'sex' not in st.session_state:
-    st.session_state['sex'] = 'Man'
-if 'weight' not in st.session_state:
-    st.session_state['weight'] = 70.0
-if 'height' not in st.session_state:
-    st.session_state['height'] = 1.72
-if 'age' not in st.session_state:
-    st.session_state['age'] = 30
+# Initialize anthropometrics with helper
+anthropometrics = init_anthropometrics(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
 
 # Sync sex with showcase selection
 st.session_state['sex'] = showcase_sex
+anthropometrics["sex"] = st.session_state['sex']
 
-anthropometrics = {"sex": st.session_state['sex'], "weight": st.session_state['weight'], "height": st.session_state['height'], "age": st.session_state['age']}
 st.write(f"**Sex:** {showcase_sex} (linked to showcase selection)")
 anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight")
 anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height")
@@ -328,14 +277,11 @@ if n_meals < 1.0:
 meal_times = [t+(30/60)*on for t in meal_times for on in [0,1]]
 meal_kcals = [0]+[m*on for m in meal_kcals for on in [1 , 0]]
 
-# Setup stimulation to the model
-stim = {
-    "EtOH_conc": {"t": t, "f": EtOH_conc},
-    "vol_drink_per_time": {"t": t, "f": vol_drink_per_time},
-    "kcal_liquid_per_vol": {"t": t, "f": kcal_liquid_per_vol},
-    "drink_length": {"t": t, "f": drink_length},
-    "kcal_solid": {"t": meal_times, "f": meal_kcals},
-    }
+# Setup stimulation to the model using helper
+stim = build_stimulus_dict(
+    drink_times, drink_lengths, drink_concentrations, 
+    drink_volumes, drink_kcals, meal_times, meal_kcals
+)
 
 # Initialize session state for simulation results
 if 'sim_results' not in st.session_state:
