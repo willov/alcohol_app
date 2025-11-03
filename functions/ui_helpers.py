@@ -368,7 +368,7 @@ def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, tit
     return fig
 
 
-def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None):
+def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None):
     """Create a multi-feature Plotly grid plot (1x1 for single feature, nx2 for multiple).
     
     - sim_results: pandas DataFrame with 'Time' column and feature columns
@@ -379,6 +379,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
     - feature_map: optional dict to map feature names to uncertainty keys
     - drink_starts: optional list of drink start times (hours)
     - drink_lengths: optional list of drink durations (minutes)
+    - data_points: optional dict with feature names as keys and lists of {"time": t, "value": v} as values
     
     Returns: plotly Figure object
     """
@@ -451,40 +452,59 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
                     x=sim_results['Time'],
                     y=sim_results[feature],
                     mode='lines',
-                    name=feature,
+                    name='Simulation',
                     line=dict(width=2, color=demo_color) if demo_color else dict(width=2),
-                    showlegend=(idx == 0) if uncert_data else False,
-                    legendgroup='simulation' if uncert_data else ''
+                    showlegend=(idx == 0),
+                    legendgroup='simulation'
                 ),
                 row=row_idx, col=col_idx
             )
+
+            # Add ±5% confidence band if data_points provided
+            if data_points:
+                # Add experimental data points if they exist for this feature
+                if feature in data_points and data_points[feature]:
+                    data_times = [float(dp['time']) for dp in data_points[feature]]
+                    data_values = [float(dp['value']) for dp in data_points[feature]]
+                    
+                    # Calculate ±5% error bars
+                    data_values_array = np.array(data_values)
+                    error_values = data_values_array * 0.05
+                    
+                    # Add experimental data points with error bars
+                    fig.add_trace(
+                        go.Scatter(
+                            x=data_times,
+                            y=data_values,
+                            mode='markers',
+                            name='Experimental data (±5%)',
+                            marker=dict(size=10, color='red', symbol='circle'),
+                            error_y=dict(
+                                type='data',
+                                array=error_values,
+                                visible=True,
+                                color='rgba(255, 0, 0, 0.6)',
+                                thickness=2
+                            ),
+                            showlegend=(idx == 0),
+                            legendgroup='data'
+                        ),
+                        row=row_idx, col=col_idx
+                    )
             
             # Add drink duration rectangles if provided
             if drink_starts and drink_lengths:
-                # Get y-range for this feature to position rectangles
-                # If we have uncertainty data, use that range; otherwise use sim data range
-                if uncert_data and demo_scenario and feature_map:
-                    mapped_feature = feature_map.get(feature, feature)
-                    if demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
-                        feat_data = uncert_data[demo_scenario][mapped_feature]
-                        uncert_max = np.array(feat_data['Max'])
-                        uncert_min = np.array(feat_data['Min'])
-                        y_min = uncert_min.min() if len(uncert_min) > 0 else 0
-                        y_max = uncert_max.max() if len(uncert_max) > 0 else 1
-                    else:
-                        y_data = sim_results[feature].dropna()
-                        y_min = y_data.min() if len(y_data) > 0 else 0
-                        y_max = y_data.max() if len(y_data) > 0 else 1
-                else:
-                    y_data = sim_results[feature].dropna()
-                    y_min = y_data.min() if len(y_data) > 0 else 0
-                    y_max = y_data.max() if len(y_data) > 0 else 1
+                # Store drink info for later layout update (we'll set fixed y-positions after layout)
+                # For now, use a relative position that will be adjusted in layout
+                # Get data range for positioning
+                y_data = sim_results[feature].dropna()
+                y_min_data = y_data.min() if len(y_data) > 0 else 0
+                y_max_data = y_data.max() if len(y_data) > 0 else 1
+                yrange = y_max_data - y_min_data if (y_max_data - y_min_data) != 0 else 1.0
                 
-                yrange = y_max - y_min if (y_max - y_min) != 0 else 1.0
-                
-                # Timeline occupies bottom 4% of y-range
+                # Position drinks at bottom 4% of visible range
                 timeline_height = 0.04 * yrange
-                y0 = y_min - 0.02 * yrange
+                y0 = y_min_data - 0.06 * yrange
                 y1 = y0 + timeline_height
                 
                 # Add colored rectangles for each drink
@@ -509,7 +529,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
         height=400 * n_rows,
         hovermode='closest',
         margin=dict(l=50, r=50, t=100, b=60),
-        showlegend=bool(uncert_data)
+        showlegend=bool(uncert_data) or bool(data_points)
     )
     
     return fig

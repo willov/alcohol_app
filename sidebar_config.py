@@ -17,4 +17,5 @@ def setup_sidebar():
     st.sidebar.page_link("pages/06_paper_2.py", label="👉 About")
     st.sidebar.page_link("pages/07_alcohol_secondary_metabolites_dynamics.py", label="⚗️ Secondary metabolites")
     st.sidebar.page_link("pages/08_plausibility_of_behavior.py", label="📊 Plausibility checks")
+    st.sidebar.page_link("pages/09_model_fitting.py", label="📈 Fit experimental data")
     st.sidebar.divider()

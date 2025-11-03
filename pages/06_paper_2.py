@@ -25,10 +25,12 @@ We hope that this model and these applications can provide insights into seconda
 
 ### Interactive demos
 
-This section contains two interactive demonstrations:
+
+This section contains three interactive demonstrations:
 
 - **Alcohol secondary metabolites dynamics** - Simulate drinks and observe the time course of EtG, EtS, and UAC
 - **Plausibility of behavior** - Evaluate claimed drinking patterns against measured biomarker levels and model uncertainty
+- **Fit experimental data** - Input your own data points and try to find a drinking pattern that fits the experimental data.
 
 ---
 
