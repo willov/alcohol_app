@@ -236,7 +236,12 @@ for i in range(n_drinks):
     key_time = f"drink_time_08_{i}"
     lock_key = f"drink_time_locked_08_{i}"
     if key_time not in st.session_state:
-        st.session_state[key_time] = start_time + i * 1.0
+        # For second drink (i=1), use sex-dependent default: 2h for females, 5h for males
+        if i == 1:
+            drink_time_default = start_time + (2.0 if anthropometrics["sex"] == 0.0 else 5.0)
+        else:
+            drink_time_default = start_time + i * 1.0
+        st.session_state[key_time] = drink_time_default
     if lock_key not in st.session_state:
         st.session_state[lock_key] = False
 
