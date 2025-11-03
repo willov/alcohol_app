@@ -2,16 +2,15 @@ import os
 import json
 import numpy as np
 import streamlit as st
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_time_propagate, lock_all,
-    draw_drink_timeline_plotly, enforce_minimum_time,
-    init_anthropometrics, build_stimulus_dict
+    seed_new_items, on_change_time_propagate, lock_all, 
+    enforce_minimum_time, init_anthropometrics, 
+    build_stimulus_dict, create_multi_feature_plot
 )
 
 # Setup sund and sidebar
@@ -358,61 +357,43 @@ if st.session_state['sim_results'] is not None:
     sim_results = st.session_state['sim_results']
     demo_anthropometrics = st.session_state['demo_anthropometrics']
     
-    # Select feature to plot
-    feature = st.selectbox("Select feature to visualize:", model_features, index=model_features.index("BAC") if "BAC" in model_features else 0)
+    # Define allowed features for page 08
+    allowed_features = ["EtOH", "UAC", "EtG", "EtS"]
+    available_features = [f for f in allowed_features if f in model_features]
     
-    # Create comparison plot
-    fig2, ax2 = plt.subplots(1, 1, figsize=(10, 5))
+    # Select features to plot
+    selected_features = st.multiselect("Select features to visualize:", available_features, default=available_features, key="plot_features_08")
     
-    # Determine which scenario to use for uncertainty based on sex
-    demo_scenario = "Man" if demo_anthropometrics["sex"] == 1.0 else "Woman"
-    demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
-    
-    # Plot uncertainty (using appropriate scenario)
-    if uncert_data and demo_scenario in uncert_data:
+    if selected_features:
+        # Determine which scenario to use for uncertainty based on sex
+        demo_scenario = "Man" if demo_anthropometrics["sex"] == 1.0 else "Woman"
+        demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
+        
         # Map feature names (model uses different names)
         feature_map = {"BAC": "EtOH", "EtOH": "EtOH", "UAC": "UAC", "EtG": "EtG", "EtS": "EtS"}
-        mapped_feature = feature_map.get(feature, feature)
         
-        if mapped_feature in uncert_data[demo_scenario]:
-            # Uncertainty time is in minutes, convert to hours
-            uncert_time_hours = np.array(uncert_data[demo_scenario][mapped_feature]['Time']) / 60.0
-            uncert_max = np.array(uncert_data[demo_scenario][mapped_feature]['Max'])
-            uncert_min = np.array(uncert_data[demo_scenario][mapped_feature]['Min'])
-            uncert_median = (uncert_max + uncert_min) / 2
-            
-            ax2.fill_between(uncert_time_hours, uncert_min, uncert_max, color=demo_color, alpha=0.25, label='Scenario truth')
-    
-    # Plot simulation - try interactive Plotly timeline (fall back to matplotlib)
-    try:
-        # adjust sim_results time to start at 0 for plotting against uncertainty
+        # Adjust sim_results time to start at 0 for plotting against uncertainty
         sim_df = sim_results.copy()
         sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
-
-        # prepare uncertainty arrays if available
-        uncert_time_hours = None
-        uncert_max = None
-        uncert_min = None
-        if uncert_data and demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
-            uncert_time_hours = np.array(uncert_data[demo_scenario][mapped_feature]['Time']) / 60.0
-            uncert_max = np.array(uncert_data[demo_scenario][mapped_feature]['Max'])
-            uncert_min = np.array(uncert_data[demo_scenario][mapped_feature]['Min'])
-
-        fig_plotly = draw_drink_timeline_plotly(sim_df, feature, drink_times, drink_length, title=f"{feature} - Simulation vs Model Uncertainty", uncert_time=uncert_time_hours, uncert_min=uncert_min, uncert_max=uncert_max, uncert_color='rgba(255,127,0,0.15)')
-        st.plotly_chart(fig_plotly, use_container_width=True, key=f"plot_08_{feature}")
-    except Exception:
-        # Fallback to the matplotlib rendering
-        # Plot simulation - adjust time to start at 0 (representing 15:00)
-        sim_time_adjusted = sim_results['Time'] - sim_results['Time'].min()
-        if feature in sim_results.columns:
-            ax2.plot(sim_time_adjusted, sim_results[feature], color='blue', linewidth=2, label='Your simulation', linestyle='--')
-
-        ax2.set_xlabel("Time (hours since 15:00)")
-        ax2.set_ylabel(feature)
-        ax2.set_title(f"{feature} - Simulation vs Model Uncertainty")
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-
-        st.pyplot(fig2)
+        
+        # Adjust drink times to start at 0 (relative to first drink)
+        first_drink_time = min(drink_times) if drink_times else 15.0
+        drink_times_relative = [t - first_drink_time for t in drink_times]
+        
+        fig = create_multi_feature_plot(
+            sim_df, 
+            selected_features,
+            uncert_data=uncert_data,
+            demo_scenario=demo_scenario,
+            demo_color=demo_color,
+            feature_map=feature_map,
+            drink_starts=drink_times_relative,
+            drink_lengths=drink_lengths
+        )
+        
+        if fig:
+            st.plotly_chart(fig, use_container_width=True, key=f"plot_08_multi")
+    else:
+        st.info("👆 Select at least one feature to plot.")
 else:
     st.info("👆 Click the button above to run the simulation with your chosen parameters.")

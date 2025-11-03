@@ -5,7 +5,7 @@ from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_time_propagate, lock_all, 
     draw_drink_timeline_plotly, enforce_minimum_time,
-    init_anthropometrics, build_stimulus_dict
+    init_anthropometrics, build_stimulus_dict, create_multi_feature_plot
 )
 
 # Setup sund and sidebar
@@ -181,15 +181,11 @@ stim = build_stimulus_dict(
 sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
 
 st.subheader("Plotting the time course given the alcoholic drinks specified")
-feature = st.selectbox("Feature of the model to plot", model_features)
+selected_features = st.multiselect("Features of the model to plot", model_features, default=[model_features[0]] if model_features else [])
 
-try:
-    # Use Plotly interactive chart with drink timeline
-    fig = draw_drink_timeline_plotly(sim_results, feature, drink_starts=drink_times, drink_lengths=drink_lengths, title=f"{feature} - Simulation")
-    st.plotly_chart(fig, use_container_width=True, key=f"plot_02_{feature}")
-except Exception as e:
-    # Fallback: show simple line chart
-    if feature in sim_results.columns:
-        st.line_chart(sim_results, x="Time", y=feature)
-    else:
-        st.info("👆 Click the button above to run the simulation with your chosen parameters.")
+if selected_features:
+    fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
+    if fig:
+        st.plotly_chart(fig, use_container_width=True, key=f"plot_02_multi")
+else:
+    st.info("👆 Select at least one feature to plot.")

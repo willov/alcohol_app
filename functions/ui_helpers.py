@@ -367,3 +367,149 @@ def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, tit
 
     return fig
 
+
+def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None):
+    """Create a multi-feature Plotly grid plot (1x1 for single feature, nx2 for multiple).
+    
+    - sim_results: pandas DataFrame with 'Time' column and feature columns
+    - selected_features: list of feature names to plot
+    - uncert_data: optional dict with uncertainty data (for page 08)
+    - demo_scenario: optional scenario key for uncertainty lookup
+    - demo_color: optional color for uncertainty band (hex string)
+    - feature_map: optional dict to map feature names to uncertainty keys
+    - drink_starts: optional list of drink start times (hours)
+    - drink_lengths: optional list of drink durations (minutes)
+    
+    Returns: plotly Figure object
+    """
+    try:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+    except Exception:
+        raise
+    
+    if not selected_features:
+        return None
+    
+    # Calculate grid dimensions
+    n_features = len(selected_features)
+    if n_features == 1:
+        n_rows, n_cols = 1, 1
+    else:
+        n_rows = (n_features + 1) // 2  # Ceiling division
+        n_cols = 2
+    
+    # Create subplots
+    fig = make_subplots(
+        rows=n_rows, cols=n_cols,
+        subplot_titles=selected_features,
+        horizontal_spacing=0.15,
+        vertical_spacing=0.15
+    )
+    
+    for idx, feature in enumerate(selected_features):
+        if n_cols == 1:
+            row_idx = idx + 1
+            col_idx = 1
+        else:
+            row_idx = (idx // 2) + 1
+            col_idx = (idx % 2) + 1
+        
+        if feature in sim_results.columns:
+            # Add uncertainty band if provided
+            if uncert_data and demo_scenario and demo_color and feature_map:
+                mapped_feature = feature_map.get(feature, feature)
+                if demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
+                    feat_data = uncert_data[demo_scenario][mapped_feature]
+                    uncert_time = np.array(feat_data['Time']) / 60.0  # Convert minutes to hours
+                    uncert_max = np.array(feat_data['Max'])
+                    uncert_min = np.array(feat_data['Min'])
+                    
+                    # Convert hex color to rgba
+                    rgb = tuple(int(demo_color[i:i+2], 16) for i in (1, 3, 5))
+                    rgba_str = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.25)'
+                    
+                    # Add uncertainty band
+                    fig.add_trace(
+                        go.Scatter(
+                            x=list(uncert_time) + list(reversed(uncert_time)),
+                            y=list(uncert_max) + list(reversed(uncert_min)),
+                            fill='toself',
+                            fillcolor=rgba_str,
+                            line=dict(color='rgba(255,255,255,0)'),
+                            hoverinfo='skip',
+                            showlegend=(idx == 0),
+                            name='Uncertainty',
+                            legendgroup='uncertainty'
+                        ),
+                        row=row_idx, col=col_idx
+                    )
+            
+            # Add simulation line
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_results['Time'],
+                    y=sim_results[feature],
+                    mode='lines',
+                    name=feature,
+                    line=dict(width=2, color=demo_color) if demo_color else dict(width=2),
+                    showlegend=(idx == 0) if uncert_data else False,
+                    legendgroup='simulation' if uncert_data else ''
+                ),
+                row=row_idx, col=col_idx
+            )
+            
+            # Add drink duration rectangles if provided
+            if drink_starts and drink_lengths:
+                # Get y-range for this feature to position rectangles
+                # If we have uncertainty data, use that range; otherwise use sim data range
+                if uncert_data and demo_scenario and feature_map:
+                    mapped_feature = feature_map.get(feature, feature)
+                    if demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
+                        feat_data = uncert_data[demo_scenario][mapped_feature]
+                        uncert_max = np.array(feat_data['Max'])
+                        uncert_min = np.array(feat_data['Min'])
+                        y_min = uncert_min.min() if len(uncert_min) > 0 else 0
+                        y_max = uncert_max.max() if len(uncert_max) > 0 else 1
+                    else:
+                        y_data = sim_results[feature].dropna()
+                        y_min = y_data.min() if len(y_data) > 0 else 0
+                        y_max = y_data.max() if len(y_data) > 0 else 1
+                else:
+                    y_data = sim_results[feature].dropna()
+                    y_min = y_data.min() if len(y_data) > 0 else 0
+                    y_max = y_data.max() if len(y_data) > 0 else 1
+                
+                yrange = y_max - y_min if (y_max - y_min) != 0 else 1.0
+                
+                # Timeline occupies bottom 4% of y-range
+                timeline_height = 0.04 * yrange
+                y0 = y_min - 0.02 * yrange
+                y1 = y0 + timeline_height
+                
+                # Add colored rectangles for each drink
+                colors = ['rgba(255,127,0,0.4)', 'rgba(127,0,255,0.35)', 'rgba(0,127,255,0.35)', 'rgba(0,200,0,0.35)']
+                for i, start in enumerate(drink_starts):
+                    dur_min = drink_lengths[i] if i < len(drink_lengths) else 0
+                    end = start + (dur_min / 60.0)
+                    color = colors[i % len(colors)]
+                    
+                    # Add rectangle for drink duration
+                    fig.add_shape(
+                        type='rect', x0=start, x1=end, y0=y0, y1=y1, fillcolor=color, line=dict(width=0),
+                        row=row_idx, col=col_idx
+                    )
+            
+            # Update axes
+            fig.update_xaxes(title_text='Time (h)', row=row_idx, col=col_idx)
+            fig.update_yaxes(title_text=feature, row=row_idx, col=col_idx)
+    
+    # Update layout
+    fig.update_layout(
+        height=400 * n_rows,
+        hovermode='closest',
+        margin=dict(l=50, r=50, t=100, b=60),
+        showlegend=bool(uncert_data)
+    )
+    
+    return fig
