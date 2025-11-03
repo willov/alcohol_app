@@ -394,18 +394,36 @@ if st.session_state['sim_results'] is not None:
             
             ax2.fill_between(uncert_time_hours, uncert_min, uncert_max, color=demo_color, alpha=0.25, label='Scenario truth')
     
-    # Plot simulation - adjust time to start at 0 (representing 15:00)
-    # The simulation time starts at drink time, need to shift to match uncertainty (which starts at 0)
-    sim_time_adjusted = sim_results['Time'] - sim_results['Time'].min()
-    if feature in sim_results.columns:
-        ax2.plot(sim_time_adjusted, sim_results[feature], color='blue', linewidth=2, label='Your simulation', linestyle='--')
-    
-    ax2.set_xlabel("Time (hours since 15:00)")
-    ax2.set_ylabel(feature)
-    ax2.set_title(f"{feature} - Simulation vs Model Uncertainty")
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    
-    st.pyplot(fig2)
+    # Plot simulation - try interactive Plotly timeline (fall back to matplotlib)
+    try:
+        # adjust sim_results time to start at 0 for plotting against uncertainty
+        sim_df = sim_results.copy()
+        sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
+
+        # prepare uncertainty arrays if available
+        uncert_time_hours = None
+        uncert_max = None
+        uncert_min = None
+        if uncert_data and demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
+            uncert_time_hours = np.array(uncert_data[demo_scenario][mapped_feature]['Time']) / 60.0
+            uncert_max = np.array(uncert_data[demo_scenario][mapped_feature]['Max'])
+            uncert_min = np.array(uncert_data[demo_scenario][mapped_feature]['Min'])
+
+        fig_plotly = draw_drink_timeline_plotly(sim_df, feature, drink_times, drink_length, title=f"{feature} - Simulation vs Model Uncertainty", uncert_time=uncert_time_hours, uncert_min=uncert_min, uncert_max=uncert_max, uncert_color='rgba(255,127,0,0.15)')
+        st.plotly_chart(fig_plotly, use_container_width=True)
+    except Exception:
+        # Fallback to the matplotlib rendering
+        # Plot simulation - adjust time to start at 0 (representing 15:00)
+        sim_time_adjusted = sim_results['Time'] - sim_results['Time'].min()
+        if feature in sim_results.columns:
+            ax2.plot(sim_time_adjusted, sim_results[feature], color='blue', linewidth=2, label='Your simulation', linestyle='--')
+
+        ax2.set_xlabel("Time (hours since 15:00)")
+        ax2.set_ylabel(feature)
+        ax2.set_title(f"{feature} - Simulation vs Model Uncertainty")
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+
+        st.pyplot(fig2)
 else:
     st.info("👆 Click the button above to run the simulation with your chosen parameters.")

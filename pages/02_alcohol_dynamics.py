@@ -238,4 +238,14 @@ sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
 
 st.subheader("Plotting the time course given the alcoholic drinks specified")
 feature = st.selectbox("Feature of the model to plot", model_features)
-st.line_chart(sim_results, x="Time", y=feature)
+
+try:
+    # Use Plotly interactive chart with drink timeline
+    fig = draw_drink_timeline_plotly(sim_results, feature, drink_starts=drink_times, drink_lengths=drink_lengths, title=f"{feature} - Simulation")
+    st.plotly_chart(fig, use_container_width=True)
+except Exception:
+    # Fallback: show simple line chart
+    if feature in sim_results.columns:
+        st.line_chart(sim_results, x="Time", y=feature)
+    else:
+        st.info("👆 Click the button above to run the simulation with your chosen parameters.")
