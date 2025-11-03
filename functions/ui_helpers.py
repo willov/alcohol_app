@@ -81,6 +81,42 @@ def on_change_time_propagate(page, what, index, n, step):
             st.session_state[f"{what}_time_{page}_{j}"] = base_time + (j - index) * step
 
 
+def enforce_minimum_time(page, what, index, n, min_gap=None):
+    """Enforce that an item's time is not before the previous item's time + min_gap.
+    
+    If the current time is less than the previous item's time + min_gap,
+    reset it to the previous time + min_gap (or min_gap if index 0).
+    
+    - page: page id string (e.g., '02')
+    - what: 'drink' or 'meal'
+    - index: int index of the item to check
+    - n: total count
+    - min_gap: minimum gap from previous item. If None, uses duration of previous item.
+               For drinks, this is drink_length (in minutes), for meals it defaults to 0.0.
+    """
+    current_key = f"{what}_time_{page}_{index}"
+    current_time = st.session_state.get(current_key, 0.0)
+    
+    if index == 0:
+        # First item must be >= 0
+        if current_time < 0.0:
+            st.session_state[current_key] = 0.0
+    else:
+        # Subsequent items must be >= previous item's time + min_gap
+        prev_key = f"{what}_time_{page}_{index - 1}"
+        prev_time = st.session_state.get(prev_key, 0.0)
+        
+        # Compute min_gap from previous item's duration if not provided
+        if min_gap is None:
+            # Get the duration of the previous item in hours
+            prev_length_key = f"{what}_length{index - 1}"
+            prev_length_minutes = st.session_state.get(prev_length_key, 0.0)
+            min_gap = prev_length_minutes / 60.0  # Convert minutes to hours
+        
+        min_allowed = prev_time + min_gap
+        if current_time < min_allowed:
+            st.session_state[current_key] = min_allowed
+
 def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, title=None, uncert_time=None, uncert_min=None, uncert_max=None, uncert_color='rgba(200,200,200,0.25)'):
     """Return a plotly Figure showing the simulation line and drink-duration rectangles at the bottom.
 

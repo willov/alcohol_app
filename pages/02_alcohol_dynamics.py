@@ -16,7 +16,7 @@ sys.path.append('./custom_package')
 import sund
 
 from sidebar_config import setup_sidebar
-from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly
+from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly, enforce_minimum_time
 
 # Setup sidebar
 setup_sidebar()
@@ -129,6 +129,9 @@ st.divider()
 start_time = 18.0
 
 def _on_change_drink_time(index):
+    # Enforce that this drink's time is not before the previous drink's time + previous drink's duration
+    enforce_minimum_time(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), min_gap=None)
+    # Propagate changes to subsequent unlocked drinks
     on_change_time_propagate(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), step=1.0)
 
 # Initialize default times and locked flags when not present in session_state
@@ -152,7 +155,7 @@ for i in range(n_drinks):
     with col2:
         drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
     with col3:
-        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.01, key=f"drink_concentrations{i}"))
+        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:
         drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
     with col5:
@@ -193,6 +196,9 @@ if lockm_b.button("Unlock all meals", key="unlock_all_meals_02"):
 st.divider()
 
 def _on_change_meal_time_02(index):
+    # Enforce that this meal's time is not before the previous meal's time + 10 minutes
+    enforce_minimum_time(page="02", what="meal", index=index, n=st.session_state.get("n_meals_02", 0), min_gap=10.0/60.0)  # 10 minutes in hours
+    # Propagate changes to subsequent unlocked meals
     on_change_time_propagate(page="02", what="meal", index=index, n=st.session_state.get("n_meals_02", 0), step=6.0)
 
 # Initialize meal defaults and locks

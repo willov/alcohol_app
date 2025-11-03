@@ -16,7 +16,7 @@ if "sund" not in os.listdir('./custom_package'):
 sys.path.append('./custom_package')
 import sund
 from sidebar_config import setup_sidebar
-from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly
+from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly, enforce_minimum_time
 
 # Setup sidebar
 setup_sidebar()
@@ -240,6 +240,7 @@ st.divider()
 start_time = 15.0  # Start at 15:00 (3 PM)
 
 def _on_change_drink_time_08(index):
+    enforce_minimum_time(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
     on_change_time_propagate(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), step=1.0)
 
 # Initialize session defaults and lock flags
@@ -297,6 +298,8 @@ st.divider()
 start_time_meal = 12.0
 
 def _on_change_meal_time_08(index):
+    # Enforce that this meal's time is not before the previous meal's time + 10 minutes
+    enforce_minimum_time(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), min_gap=10.0/60.0)  # 10 minutes in hours
     on_change_time_propagate(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), step=6.0)
 
 # Initialize meal defaults and locks for page 08
