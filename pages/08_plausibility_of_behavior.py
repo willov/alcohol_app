@@ -413,7 +413,7 @@ if st.session_state['sim_results'] is not None:
             uncert_min = np.array(uncert_data[demo_scenario][mapped_feature]['Min'])
 
         fig_plotly = draw_drink_timeline_plotly(sim_df, feature, drink_times, drink_length, title=f"{feature} - Simulation vs Model Uncertainty", uncert_time=uncert_time_hours, uncert_min=uncert_min, uncert_max=uncert_max, uncert_color='rgba(255,127,0,0.15)')
-        st.plotly_chart(fig_plotly, use_container_width=True)
+        st.plotly_chart(fig_plotly, use_container_width=True, key=f"plot_08_{feature}")
     except Exception:
         # Fallback to the matplotlib rendering
         # Plot simulation - adjust time to start at 0 (representing 15:00)

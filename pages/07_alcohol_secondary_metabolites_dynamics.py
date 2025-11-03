@@ -237,6 +237,6 @@ feature = st.selectbox("Feature of the model to plot", model_features)
 # Try to render an interactive Plotly timeline with drink duration rectangles. Fall back to line_chart if plotly
 try:
     fig = draw_drink_timeline_plotly(sim_results, feature, drink_times, drink_lengths, title=f"{feature} over time")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=f"plot_07_{feature}")
 except Exception:
     st.line_chart(sim_results, x="Time", y=feature)
