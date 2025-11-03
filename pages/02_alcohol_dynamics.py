@@ -93,8 +93,7 @@ for i in range(n_drinks):
         drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_02_{i}", on_change=_on_change_drink_time, args=(i,)))
     # visible lock checkbox to prevent cascading changes
     lock_key = f"drink_time_locked_02_{i}"
-    lock_label = "Lock 🔒" if st.session_state.get(lock_key, False) else "Lock"
-    st.checkbox(lock_label, key=lock_key, help="Prevent auto-fill changes to this drink time")
+    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
         drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
     with col3:
@@ -158,8 +157,7 @@ for i in range(n_meals):
     with col1:
         meal_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"meal_time_02_{i}", on_change=_on_change_meal_time_02, args=(i,)))
     lock_key = f"meal_time_locked_02_{i}"
-    lock_label = "Lock 🔒" if st.session_state.get(lock_key, False) else "Lock"
-    st.checkbox(lock_label, key=lock_key, help="Prevent auto-fill changes to this meal time")
+    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this meal time")
     with col2:
         meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 1.0, key=f"meal_kcals{i}"))
     start_time += 6

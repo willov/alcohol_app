@@ -263,8 +263,7 @@ for i in range(n_drinks):
     with col1:
         drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_09_{i}", on_change=_on_change_drink_time_09, args=(i,)))
     lock_key = f"drink_time_locked_09_{i}"
-    lock_label = "Lock 🔒" if st.session_state.get(lock_key, False) else "Lock"
-    st.checkbox(lock_label, key=lock_key, help="Prevent auto-fill changes to this drink time")
+    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
         drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length_09_{i}"))
     with col3:
