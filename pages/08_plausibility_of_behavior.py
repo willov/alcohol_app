@@ -9,8 +9,8 @@ from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_time_propagate, lock_all, 
-    enforce_minimum_time, init_anthropometrics, 
-    build_stimulus_dict, create_multi_feature_plot
+    enforce_minimum_time, 
+    build_stimulus_dict, create_multi_feature_plot, get_anthropometrics_ui
 )
 
 # Setup sund and sidebar
@@ -196,19 +196,13 @@ st.markdown("Specify your own drinking pattern and anthropometric characteristic
 # Anthropometrics            
 st.subheader("Anthropometrics")
 
-# Initialize anthropometrics with helper
-anthropometrics = init_anthropometrics(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
-
-# Sync sex with showcase selection
-st.session_state['sex'] = showcase_sex
-anthropometrics["sex"] = st.session_state['sex']
-
 st.write(f"**Sex:** {showcase_sex} (linked to showcase selection)")
-anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight")
-anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height")
-anthropometrics["age"] = st.number_input("Age (years):", 0, 120, st.session_state.age, key="age")
-
-anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"]) #Converts to a numerical representation
+anthropometrics = {
+    "sex": float(showcase_sex.lower() in ["male", "man", "men", "boy", "1", "chap", "guy"]),
+    "weight": st.number_input("Weight (kg):", 0.0, 200.0, 70.0, 1.0, key="weight_08"),
+    "height": st.number_input("Height (m):", 0.0, 2.5, 1.72, key="height_08"),
+    "age": st.number_input("Age (years):", 0, 120, 30, key="age_08")
+}
 
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")

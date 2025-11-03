@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
-    setup_sund_package, setup_model, simulate, flatten, get_drink_specs
+    setup_sund_package, setup_model, simulate_week, 
+    get_drink_specs, build_stimulus_dict
 )
 
 # Setup sund and sidebar
@@ -14,75 +15,6 @@ setup_sidebar()
 # Setup the model
 model, model_features = setup_model('alcohol_model')
 model_features = [feature for feature in model_features if feature not in ['Acetate in plasma', 'Gastric volume']]
-
-def simulate_week(anthropometrics, drink_type, drink_grams_total, n_weeks = 1):
-    """Simulate weekly drinking pattern and return results."""
-    specs = get_drink_specs(drink_type)
-    drink_conc = specs["conc"]
-    drink_volume = specs["volume"]
-    drink_kcal_per_liter = specs["kcal"]
-    drink_kcal = drink_kcal_per_liter * drink_volume
-    drink_length = specs["length"]
-
-    single_drink_grams = drink_conc * drink_volume * 0.7891 * 10
-
-    # Generate drinking schedule across days
-    drink_times = [[], [], [], [], [], [], []]
-    drink_lengths = [[], [], [], [], [], [], []]
-    drink_concentrations = [[], [], [], [], [], [], []]
-    drink_volumes = [[], [], [], [], [], [], []]
-    drink_kcals = [[], [], [], [], [], [], []]
-
-    start_time = 18.0
-    drinks_total = drink_grams_total / single_drink_grams
-    drinks_per_day = drinks_total / 7
-
-    for drink in range(0, int(np.ceil(drinks_per_day)) + 1):
-        for day in range(5, -2, -1):
-            if drinks_total > 0:
-                drink_times[day].append(start_time)
-                drink_lengths[day].append(drink_length)
-                drink_concentrations[day].append(drink_conc)
-                drink_volumes[day].append(min(1, drinks_total) * drink_volume)
-                drink_kcals[day].append(drink_kcal)
-                drinks_total -= 1
-        start_time += 1
-
-    # Flatten and repeat for n_weeks
-    drink_times = [t + 24*day for day, times in enumerate(drink_times) for t in times]
-    drink_lengths = flatten(drink_lengths)
-    drink_concentrations = flatten(drink_concentrations)
-    drink_volumes = flatten(drink_volumes)
-    drink_kcals = flatten(drink_kcals)
-
-    drink_times = [t + 24*7*week for week in range(0, n_weeks) for t in drink_times]
-    drink_lengths = drink_lengths * n_weeks
-    drink_concentrations = drink_concentrations * n_weeks
-    drink_volumes = drink_volumes * n_weeks
-    drink_kcals = drink_kcals * n_weeks
-
-    # Generate meal schedule
-    if anthropometrics["sex"] == 1:
-        daily_kcal = 2500
-    else:
-        daily_kcal = 2000
-
-    meal_times = [t + 24*d + 24*7*w for w in range(n_weeks) for d in range(0, 7) for t in [7, 12, 18]]
-    meal_lengths = 30.0 / 60
-    meal_times = [t + meal_lengths*on for t in meal_times for on in [0, 1]]
-
-    meal_kcals = [0.2*daily_kcal, 0.4*daily_kcal, 0.4*daily_kcal] * 7 * n_weeks
-    meal_kcals = [k*on for k in meal_kcals for on in [1, 0]]
-
-    # Build stimulus using helper
-    from functions.ui_helpers import build_stimulus_dict
-    stim = build_stimulus_dict(
-        drink_times, drink_lengths, drink_concentrations, 
-        drink_volumes, drink_kcals, meal_times, [0] + meal_kcals
-    )
-
-    sim_results = simulate(model, anthropometrics, stim, extra_time=12)
-    return sim_results
 
 # Start the app
 
@@ -125,20 +57,20 @@ if sim_large_woman:
 
 for gram in dose_response["Ethanol/week (gram)"]:
     if sim_small_man:
-        anthropometrics_small_man = anthropometrics = {"sex": 1, "weight": 65.0, "height": 1.7}
-        sim_results = simulate_week(anthropometrics_small_man, drink_type, gram, n_weeks)
+        anthropometrics = {"sex": 1, "weight": 65.0, "height": 1.7}
+        sim_results = simulate_week(model, anthropometrics, drink_type, gram, n_weeks)
         dose_response["PEth (small man)"].append(sim_results["PEth (ng/mL)"].values[-1])
     if sim_large_man:
-        anthropometrics_large_man = anthropometrics = {"sex": 1, "weight": 105.0, "height": 1.9}
-        sim_results = simulate_week(anthropometrics_large_man, drink_type, gram, n_weeks)
+        anthropometrics = {"sex": 1, "weight": 105.0, "height": 1.9}
+        sim_results = simulate_week(model, anthropometrics, drink_type, gram, n_weeks)
         dose_response["PEth (large man)"].append(sim_results["PEth (ng/mL)"].values[-1])
     if sim_small_woman:
-        anthropometrics_small_woman = anthropometrics = {"sex": 0, "weight": 50.0, "height": 1.5}
-        sim_results = simulate_week(anthropometrics_small_woman, drink_type, gram, n_weeks)
+        anthropometrics = {"sex": 0, "weight": 50.0, "height": 1.5}
+        sim_results = simulate_week(model, anthropometrics, drink_type, gram, n_weeks)
         dose_response["PEth (small woman)"].append(sim_results["PEth (ng/mL)"].values[-1])
     if sim_large_woman:
-        anthropometrics_large_woman = anthropometrics = {"sex": 0, "weight": 80.0, "height": 1.75}
-        sim_results = simulate_week(anthropometrics_large_woman, drink_type, gram, n_weeks)
+        anthropometrics = {"sex": 0, "weight": 80.0, "height": 1.75}
+        sim_results = simulate_week(model, anthropometrics, drink_type, gram, n_weeks)
         dose_response["PEth (large woman)"].append(sim_results["PEth (ng/mL)"].values[-1])
 
 

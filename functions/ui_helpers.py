@@ -74,8 +74,17 @@ def simulate(model, anthropometrics, stim, extra_time=10):
     for key, val in stim.items():
         act.add_output(name=key, type='piecewise_constant', t=val["t"], f=val["f"])
     
+    # Only pass anthropometric parameters that the model expects and have valid values
+    valid_params = {'sex', 'weight', 'height', 'age'}
     for key, val in anthropometrics.items():
-        act.add_output(name=key, type='constant', f=val)
+        if key in valid_params and val is not None:
+            try:
+                # Ensure val is numeric
+                numeric_val = float(val) if not isinstance(val, (int, float)) else val
+                act.add_output(name=key, type='constant', f=numeric_val)
+            except (ValueError, TypeError):
+                # Skip invalid values
+                pass
     
     sim = sund.Simulation(models=model, activities=act, time_unit='h')
     
@@ -129,10 +138,9 @@ def get_drink_specs(drink_type):
     return specs[drink_type]
 
 
-def init_anthropometrics(page_id=None, defaults=None):
+def init_anthropometrics(defaults=None):
     """Initialize anthropometric session state variables.
     
-    - page_id: optional page identifier for debugging
     - defaults: optional dict with keys 'sex', 'weight', 'height', 'age'
     
     Returns: dict with anthropometric values
@@ -140,24 +148,14 @@ def init_anthropometrics(page_id=None, defaults=None):
     if defaults is None:
         defaults = {"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30}
     
+    keys = ["sex", "weight", "height", "age"]
+    
     # Initialize session state
-    if 'sex' not in st.session_state:
-        st.session_state['sex'] = defaults.get('sex', 'Man')
-    if 'weight' not in st.session_state:
-        st.session_state['weight'] = defaults.get('weight', 70.0)
-    if 'height' not in st.session_state:
-        st.session_state['height'] = defaults.get('height', 1.72)
-    if 'age' not in st.session_state:
-        st.session_state['age'] = defaults.get('age', 30)
+    for key in keys:
+        if key not in st.session_state:
+            st.session_state[key] = defaults.get(key, None)
     
-    anthropometrics = {
-        "sex": st.session_state['sex'],
-        "weight": st.session_state['weight'],
-        "height": st.session_state['height'],
-        "age": st.session_state['age']
-    }
-    
-    return anthropometrics
+    return {key: st.session_state[key] for key in keys}
 
 
 def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations, 
@@ -184,6 +182,131 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     }
     
     return stim
+
+
+def get_anthropometrics_ui(defaults=None):
+    """Render anthropometric UI inputs and return values.
+    
+    Displays Streamlit UI inputs for sex, weight, height, and age.
+    Uses session state for persistence across reruns.
+    
+    - defaults: optional dict with keys 'sex', 'weight', 'height', 'age'
+    
+    Returns: dict with anthropometric values (sex as numeric: 1.0 for male, 0.0 for female)
+    """
+    if defaults is None:
+        defaults = {"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30}
+    
+    anthropometrics = init_anthropometrics(defaults=defaults)
+    
+    anthropometrics["sex"] = st.selectbox(
+        "Sex:", 
+        ["Man", "Woman"], 
+        index=["Man", "Woman"].index(anthropometrics['sex']) if isinstance(anthropometrics['sex'], str) else (0 if anthropometrics['sex'] == 1.0 else 1),
+        key="sex"
+    )
+    anthropometrics["weight"] = st.number_input(
+        "Weight (kg):", 
+        min_value=0.0, 
+        max_value=200.0, 
+        value=float(st.session_state.get("weight", 70.0) or 70.0), 
+        step=1.0, 
+        key="weight"
+    )
+    anthropometrics["height"] = st.number_input(
+        "Height (m):", 
+        min_value=0.0, 
+        max_value=2.5, 
+        value=float(st.session_state.get("height", 1.72) or 1.72), 
+        key="height"
+    )
+    anthropometrics["age"] = st.number_input(
+        "Age (years):", 
+        min_value=0, 
+        max_value=120, 
+        value=int(st.session_state.get("age", 30) or 30),
+        key="age"
+    )
+    
+    # Convert sex string to numeric (1.0 for male, 0.0 for female)
+    anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"])
+    
+    return anthropometrics
+
+
+def simulate_week(model, anthropometrics, drink_type, drink_grams_total, n_weeks=1):
+    """Simulate weekly drinking pattern and return results.
+    
+    - model: sund model instance (should be 'alcohol_model')
+    - anthropometrics: dict with 'sex', 'weight', 'height' keys
+    - drink_type: "Beer", "Wine", or "Spirit"
+    - drink_grams_total: total ethanol in grams for the week
+    - n_weeks: number of weeks to simulate (default: 1)
+    
+    Returns: DataFrame with simulation results
+    """
+    specs = get_drink_specs(drink_type)
+    drink_conc = specs["conc"]
+    drink_volume = specs["volume"]
+    drink_kcal_per_liter = specs["kcal"]
+    drink_kcal = drink_kcal_per_liter * drink_volume
+    drink_length = specs["length"]
+
+    single_drink_grams = drink_conc * drink_volume * 0.7891 * 10
+
+    # Generate drinking schedule across days
+    drink_times = [[], [], [], [], [], [], []]
+    drink_lengths = [[], [], [], [], [], [], []]
+    drink_concentrations = [[], [], [], [], [], [], []]
+    drink_volumes = [[], [], [], [], [], [], []]
+    drink_kcals = [[], [], [], [], [], [], []]
+
+    start_time = 18.0
+    drinks_total = drink_grams_total / single_drink_grams
+    drinks_per_day = drinks_total / 7
+
+    for drink in range(0, int(np.ceil(drinks_per_day)) + 1):
+        for day in range(5, -2, -1):
+            if drinks_total > 0:
+                drink_times[day].append(start_time)
+                drink_lengths[day].append(drink_length)
+                drink_concentrations[day].append(drink_conc)
+                drink_volumes[day].append(min(1, drinks_total) * drink_volume)
+                drink_kcals[day].append(drink_kcal)
+                drinks_total -= 1
+        start_time += 1
+
+    # Flatten and repeat for n_weeks
+    drink_times = [t + 24*day for day, times in enumerate(drink_times) for t in times]
+    drink_lengths = flatten(drink_lengths)
+    drink_concentrations = flatten(drink_concentrations)
+    drink_volumes = flatten(drink_volumes)
+    drink_kcals = flatten(drink_kcals)
+
+    drink_times = [t + 24*7*week for week in range(0, n_weeks) for t in drink_times]
+    drink_lengths = drink_lengths * n_weeks
+    drink_concentrations = drink_concentrations * n_weeks
+    drink_volumes = drink_volumes * n_weeks
+    drink_kcals = drink_kcals * n_weeks
+
+    # Generate meal schedule
+    daily_kcal = 2500 if anthropometrics["sex"] == 1 else 2000
+
+    meal_times = [t + 24*d + 24*7*w for w in range(n_weeks) for d in range(0, 7) for t in [7, 12, 18]]
+    meal_lengths = 30.0 / 60
+    meal_times = [t + meal_lengths*on for t in meal_times for on in [0, 1]]
+
+    meal_kcals = [0.2*daily_kcal, 0.4*daily_kcal, 0.4*daily_kcal] * 7 * n_weeks
+    meal_kcals = [k*on for k in meal_kcals for on in [1, 0]]
+
+    # Build stimulus using helper
+    stim = build_stimulus_dict(
+        drink_times, drink_lengths, drink_concentrations, 
+        drink_volumes, drink_kcals, meal_times, [0] + meal_kcals
+    )
+
+    sim_results = simulate(model, anthropometrics, stim, extra_time=12)
+    return sim_results
 
 
 def prune_session_keys(page, prefix, indices, keys):

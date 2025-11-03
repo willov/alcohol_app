@@ -5,7 +5,7 @@ from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_time_propagate, lock_all,
     draw_drink_timeline_plotly, enforce_minimum_time,
-    init_anthropometrics, build_stimulus_dict, create_multi_feature_plot
+    build_stimulus_dict, create_multi_feature_plot, get_anthropometrics_ui
 )
 
 # Setup sund and sidebar
@@ -27,14 +27,7 @@ Below, you can specify one or more alcoholic drinks, and some anthropometrics to
 # Anthropometrics            
 st.subheader("Anthropometrics")
 
-# Initialize anthropometrics with helper
-anthropometrics = init_anthropometrics(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
-anthropometrics["sex"] = st.selectbox("Sex:", ["Man", "Woman"], ["Man", "Woman"].index(st.session_state['sex']), key="sex")
-anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight")
-anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height")
-anthropometrics["age"] = st.number_input("Age (years):", 0, 120, st.session_state.age, key="age")
-
-anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"]) # Converts to a numerical representation
+anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
 
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")

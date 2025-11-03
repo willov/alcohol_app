@@ -8,8 +8,8 @@ from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_time_propagate, lock_all,
-    enforce_minimum_time, init_anthropometrics,
-    build_stimulus_dict, create_multi_feature_plot
+    enforce_minimum_time,
+    build_stimulus_dict, create_multi_feature_plot, get_anthropometrics_ui
 )
 
 # Setup sund and sidebar
@@ -203,18 +203,7 @@ st.divider()
 # === ANTHROPOMETRICS SECTION ===
 st.header("👤 Subject Anthropometrics")
 
-anthropometrics = init_anthropometrics(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
-
-anthropometrics["sex"] = st.selectbox(
-    "Sex:", ["Man", "Woman"], 
-    ["Man", "Woman"].index(st.session_state['sex']), 
-    key="sex_09"
-)
-anthropometrics["weight"] = st.number_input("Weight (kg):", 0.0, 200.0, st.session_state.weight, 1.0, key="weight_09")
-anthropometrics["height"] = st.number_input("Height (m):", 0.0, 2.5, st.session_state.height, key="height_09")
-anthropometrics["age"] = st.number_input("Age (years):", 0, 120, st.session_state.age, key="age_09")
-
-anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"])
+anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
 
 st.divider()
 
