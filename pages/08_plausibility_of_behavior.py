@@ -48,7 +48,20 @@ st.header("📊 Showcase: Model Uncertainty vs Measured Data")
 st.markdown("This section displays the model's prediction uncertainty compared to actual measured data from controlled experiments.")
 
 # Sex toggle for showcase
-showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="showcase_sex")
+def _on_sex_change():
+    # Clear drink-related session state so defaults get recalculated
+    for i in range(5):  # Clear up to 5 drinks
+        key_time = f"drink_time_08_{i}"
+        if key_time in st.session_state:
+            del st.session_state[key_time]
+    # Clear simulation results so they get recalculated
+    if 'sim_results' in st.session_state:
+        del st.session_state['sim_results']
+    if 'demo_anthropometrics' in st.session_state:
+        del st.session_state['demo_anthropometrics']
+    st.rerun()
+
+showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="showcase_sex", on_change=_on_sex_change)
 
 
 # Create 4-panel plot (BAC, UAC, EtG, EtS) - Interactive Plotly version
