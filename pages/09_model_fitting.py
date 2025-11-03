@@ -99,7 +99,7 @@ if data_input_method == "Manual Entry":
                 st.write(f"{i+1}")
             with cols[1]:
                 time_key = f"time_{i}_{feature}"
-                time_val = st.number_input(f"Time {i}_{feature}", 0.0, 100.0, 0.5 + 2.0 * i, 0.1, label_visibility="collapsed", key=time_key)
+                time_val = st.number_input(f"Time {i}_{feature}", 0.0, 100.0, 1.0 + 2.0 * i, 0.1, label_visibility="collapsed", key=time_key)
             with cols[2]:
                 value_key = f"value_{i}_{feature}"
                 value_val = st.number_input(f"Value {i}_{feature}", 0.0, 10000.0, default_value * (3 - i) / 2, 0.01 if feature in ["EtG", "EtS"] else 1.0, label_visibility="collapsed", key=value_key)
