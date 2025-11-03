@@ -220,7 +220,9 @@ if sim_small_woman:
 if sim_large_woman:
     fig.add_trace(go.Scatter(name="Large woman", x = dose_response["Ethanol/week (gram)"], y=dose_response["PEth (large woman)"], mode='lines', line=dict(width=2)))
 
-fig.update_layout(xaxis_title="Ethanol/week (gram)", yaxis_title="Simulated PEth (ng/ml)", 
-                        legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
-                        margin=dict(l=0, r=0, t=0, b=0))
+fig.update_layout(
+    xaxis_title="Ethanol/week (gram)", yaxis_title="Simulated PEth (ng/ml)", 
+    legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
+    margin=dict(l=0, r=0, t=0, b=0)
+)
 st.plotly_chart(fig, use_container_width=True, config={"responsive": True})

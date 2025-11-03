@@ -194,7 +194,7 @@ with st.expander("About the simulation"):
     st.markdown(r"""
     The simulating starts with drinking one (partial) drink on the saturday. Once a full drink is drank on saturday the next drink starts on the Friday, the next on Thursday, Wednesday, Tuesday, Monday, and finally Sunday. 
     Then, the simulates starts on a second drink per day in the same order as for the first. 
-                
+
     The simulation also assumes that the person eats a total amount of 2000/2500 kcal per day, spread as 20\% breakfast at 7:00, 40\% as lunch at 12:00, and 40% as dinner at 18:00. 
     """)
 
@@ -235,9 +235,11 @@ fig.add_trace(go.Scatter(name="Simulated PEth", x = dose_response["Ethanol/week 
 fig.add_trace(go.Scatter(name="Reported PEth", x=[drink_grams_total], y=[reported_PEth], marker=dict(color="rgb(255, 191, 0)", size=10)))
 fig.add_trace(go.Scatter(name="Reported PEth", x=[0, max_sim_dose], y=[reported_PEth,reported_PEth], showlegend=False, mode='lines', line=dict(width=2, color="rgb(255, 191, 0)")))
 
-fig.update_layout(xaxis_title="Ethanol/week (gram)", yaxis_title=f"PEth ({PEth_unit})", 
-                        legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
-                        margin=dict(l=0, r=0, t=0, b=0))
+fig.update_layout(
+    xaxis_title="Ethanol/week (gram)", yaxis_title=f"PEth ({PEth_unit})", 
+    legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
+    margin=dict(l=0, r=0, t=0, b=0)
+)
 st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
 
 #fig.write_image("PEth-prediction.svg")
