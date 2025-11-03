@@ -159,7 +159,7 @@ st.markdown("# Anthropometric differences in PEth")
 # Simulating anthropometric differences
 st.subheader("Simulating differences based on anthropometrics")
 with st.expander("About the simulation"):
-    st.markdown("""
+    st.markdown(r"""
     The simulating starts with drinking one (partial) drink on the saturday. Once a full drink is drank on saturday the next drink starts on the Friday, the next on Thursday, Wednesday, Tuesday, Monday, and finally Sunday. 
     Then, the simulates starts on a second drink per day in the same order as for the first. 
     The drinks are assumed to have the following properties: 

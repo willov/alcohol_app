@@ -191,7 +191,7 @@ drink_type = st.selectbox("Type of drink (only minor differences)", ["Wine", "Be
 st.divider()
 st.subheader("Simulating the reported weekly consumption")
 with st.expander("About the simulation"):
-    st.markdown("""
+    st.markdown(r"""
     The simulating starts with drinking one (partial) drink on the saturday. Once a full drink is drank on saturday the next drink starts on the Friday, the next on Thursday, Wednesday, Tuesday, Monday, and finally Sunday. 
     Then, the simulates starts on a second drink per day in the same order as for the first. 
                 
