@@ -109,15 +109,18 @@ drink_kcals = []
 st.divider()
 start_time = 18.0
 for i in range(n_drinks):
-    st.markdown(f"**Drink {i+1}**")
-
-    drink_times.append(st.number_input("Time of drink (h): ", 0.0, 100.0, start_time, 0.1, key=f"drink_time{i}"))
-    drink_lengths.append(st.number_input("Drink length (min): ", 0.0, 240.0, 20.0, 0.1, key=f"drink_length{i}"))
-    drink_concentrations.append(st.number_input("Concentration of drink (%): ", 0.0, 100.0, 5.0, 0.01, key=f"drink_concentrations{i}"))
-    drink_volumes.append(st.number_input("Volume of drink (L): ", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
-    drink_kcals.append(st.number_input("Kcal of the drink (kcal): ", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, start_time, 0.1, key=f"drink_time{i}"))
+    with col2:
+        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
+    with col3:
+        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.01, key=f"drink_concentrations{i}"))
+    with col4:
+        drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
+    with col5:
+        drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
     start_time += 1
-    st.divider()
 
 EtOH_conc = [0]+[c*on for c in drink_concentrations for on in [1 , 0]]
 vol_drink_per_time = [0]+[v/t*on if t>0 else 0 for v,t in zip(drink_volumes, drink_lengths) for on in [1 , 0]]
@@ -136,13 +139,14 @@ meal_kcals = []
 
 n_meals = st.slider("Number of (solid) meals:", 0, 15, 1)
 
+st.divider()
 for i in range(n_meals):
-    st.markdown(f"**Meal {i+1}**")
-
-    meal_times.append(st.number_input("Time of the meal (h): ", 0.0, 100.0, start_time, 0.1, key=f"meal_time{i}"))
-    meal_kcals.append(st.number_input("Kcal of the meal (kcal): ", 0.0, 10000.0, 500.0, 1.0, key=f"meal_kcals{i}"))
+    col1, col2 = st.columns(2)
+    with col1:
+        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, start_time, 0.1, key=f"meal_time{i}"))
+    with col2:
+        meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 1.0, key=f"meal_kcals{i}"))
     start_time += 6
-    st.divider()
 
 if n_meals < 1.0:
     st.divider()
