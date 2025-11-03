@@ -1,10 +1,10 @@
 import os
 import json
-from pathlib import Path
-import pandas as pd
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
@@ -30,24 +30,6 @@ def load_uncertainty(path="./results/UC_PPL_alcohol_model_individual.json"):
         data = json.load(f)
     return data
 
-def plot_with_uncertainty(ax, uncert_data, scenario_key, feature, color, label=None, convert_to_hours=False):
-    """Plot median line with shaded uncertainty band."""
-    if scenario_key not in uncert_data:
-        return
-    if feature not in uncert_data[scenario_key]:
-        return
-    
-    feat_data = uncert_data[scenario_key][feature]
-    time = np.array(feat_data['Time'])
-    if convert_to_hours:
-        time = time / 60.0
-    max_val = np.array(feat_data['Max'])
-    min_val = np.array(feat_data['Min'])
-    median = (max_val + min_val) / 2
-    
-    ax.plot(time, median, color=color, linewidth=2, label=label)
-    ax.fill_between(time, min_val, max_val, color=color, alpha=0.25)
-
 # Start the app
 
 st.markdown("# Plausibility of behavior of secondary alcohol metabolites")
@@ -70,7 +52,7 @@ st.markdown("This section displays the model's prediction uncertainty compared t
 showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="showcase_sex")
 
 
-# Create 4-panel plot (BAC, UAC, EtG, EtS)
+# Create 4-panel plot (BAC, UAC, EtG, EtS) - Interactive Plotly version
 st.subheader(f"Model prediction of wine + vodka scenario ({showcase_sex})")
 
 features_to_plot = ["EtOH", "UAC", "EtG", "EtS"]
@@ -83,10 +65,17 @@ if showcase_sex == "Man":
 else:
     model_color = '#FF007D'  # Pink
 
-fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+# Create subplots
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=feature_labels,
+    horizontal_spacing=0.15,
+    vertical_spacing=0.15
+)
 
 for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels, feature_ylabels)):
-    ax = axes[idx]
+    row_idx = (idx // 2) + 1
+    col_idx = (idx % 2) + 1
     
     # Get plotting_info from data if available
     plot_info = {}
@@ -97,7 +86,42 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
     
     # Plot uncertainty band
     if uncert_data and showcase_sex in uncert_data:
-        plot_with_uncertainty(ax, uncert_data, showcase_sex, feat, model_color, label="Model uncertainty", convert_to_hours=True)
+        if feat in uncert_data[showcase_sex]:
+            feat_data = uncert_data[showcase_sex][feat]
+            time = np.array(feat_data['Time']) / 60.0  # Convert minutes to hours
+            max_val = np.array(feat_data['Max'])
+            min_val = np.array(feat_data['Min'])
+            
+            # Add uncertainty band
+            fig.add_trace(
+                go.Scatter(
+                    x=list(time) + list(reversed(time)),
+                    y=list(max_val) + list(reversed(min_val)),
+                    fill='toself',
+                    fillcolor=f'rgba({int(model_color[1:3], 16)}, {int(model_color[3:5], 16)}, {int(model_color[5:7], 16)}, 0.25)',
+                    line=dict(color='rgba(255,255,255,0)'),
+                    hoverinfo='skip',
+                    showlegend=(idx == 0),
+                    name='Model uncertainty',
+                    legendgroup='uncertainty'
+                ),
+                row=row_idx, col=col_idx
+            )
+            
+            # Add median line
+            median = (max_val + min_val) / 2
+            fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=median,
+                    mode='lines',
+                    line=dict(color=model_color, width=2),
+                    hoverinfo='x+y',
+                    showlegend=False,
+                    name='Median'
+                ),
+                row=row_idx, col=col_idx
+            )
 
     # Plot measured data points
     if showcase_sex in data_scenarios:
@@ -109,26 +133,42 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
             valid_idx = [i for i, val in enumerate(mean_data) if not (isinstance(val, float) and np.isnan(val))]
             time_valid = [time_data[i] / 60.0 for i in valid_idx]  # Convert minutes to hours
             mean_valid = [mean_data[i] for i in valid_idx]
-            ax.scatter(time_valid, mean_valid, c='black', s=40, zorder=5, label='Data')
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=time_valid,
+                    y=mean_valid,
+                    mode='markers',
+                    marker=dict(color='black', size=6),
+                    hoverinfo='x+y',
+                    showlegend=(idx == 0),
+                    name='Data',
+                    legendgroup='data'
+                ),
+                row=row_idx, col=col_idx
+            )
     
-    # Apply plotting settings from plotting_info
-    ax.set_title(plot_info.get('title', label))
-    ax.set_xlabel('Time (hours)')
-    ax.set_ylabel(plot_info.get('ylabel', ylabel if ylabel else ''))
-    
-    # Set axis limits from plotting_info
+    # Update axes with plotting info
     xlim = plot_info.get('xlim', [0, 900])
     xlim = [x / 60.0 for x in xlim]
     ylim = plot_info.get('ylim')
-    ax.set_xlim(xlim)
-    if ylim:
-        ax.set_ylim(ylim)
     
-    ax.legend(loc='upper right', fontsize=8)
-    ax.grid(True, alpha=0.3)
+    fig.update_xaxes(title_text='Time (hours)', range=xlim, row=row_idx, col=col_idx)
+    fig.update_yaxes(
+        title_text=plot_info.get('ylabel', ylabel if ylabel else ''),
+        row=row_idx, col=col_idx
+    )
+    if ylim:
+        fig.update_yaxes(range=ylim, row=row_idx, col=col_idx)
 
-plt.tight_layout()
-st.pyplot(fig)
+# Update layout
+fig.update_layout(
+    height=900,
+    hovermode='closest',
+    margin=dict(l=50, r=50, t=100, b=60)
+)
+
+st.plotly_chart(fig, use_container_width=True, key="showcase_plot")
 
 # Add drink timeline visualization
 if showcase_sex == "Man":
