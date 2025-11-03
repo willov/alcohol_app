@@ -143,7 +143,7 @@ def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, tit
     # Update layout
     # Use 'closest' hovermode so when the cursor is between drink rectangles the simulation trace (which spans all x)
     # is chosen as the closest trace and drink traces don't appear.
-    fig.update_layout(margin=dict(l=40, r=20, t=40, b=60), hovermode='closest')
+    fig.update_layout(margin=dict(l=40, r=20, t=80, b=60), hovermode='closest')
     fig.update_xaxes(title_text='Time (h)')
     fig.update_yaxes(title_text=feature)
     if title:
