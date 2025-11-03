@@ -16,6 +16,7 @@ sys.path.append('./custom_package')
 import sund
 
 from sidebar_config import setup_sidebar
+from functions.ui_helpers import seed_new_items, on_change_time_propagate, lock_all, draw_drink_timeline_plotly
 
 # Setup sidebar
 setup_sidebar()
@@ -97,8 +98,26 @@ anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man",
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")
 
-n_drinks = st.slider("Number of drinks:", 1, 15, 1)
+# Callback when number of drinks changes: initialize new drink times to follow last existing time
+def _on_change_n_drinks_02():
+    # Use generic seeding/pruning helper for drinks on page 02
+    seed_new_items(
+        page="02", name="drink", n=st.session_state.get("n_drinks_02", 1), default_start=18.0, step=1.0,
+        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}"
+    )
+
+# Number of drinks (store in session state so callbacks can read it)
+n_drinks = st.slider("Number of drinks:", 1, 15, 1, key="n_drinks_02", on_change=_on_change_n_drinks_02)
 extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
+
+# Lock all / Unlock all controls for drinks
+lock_col_a, lock_col_b = st.columns(2)
+if lock_col_a.button("Lock all drinks", key="lock_all_drinks_02"):
+    for i in range(n_drinks):
+        st.session_state[f"drink_time_locked_02_{i}"] = True
+if lock_col_b.button("Unlock all drinks", key="unlock_all_drinks_02"):
+    for i in range(n_drinks):
+        st.session_state[f"drink_time_locked_02_{i}"] = False
 
 drink_times = []
 drink_lengths = []
@@ -108,10 +127,28 @@ drink_kcals = []
 
 st.divider()
 start_time = 18.0
+
+def _on_change_drink_time(index):
+    on_change_time_propagate(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), step=1.0)
+
+# Initialize default times and locked flags when not present in session_state
+for i in range(n_drinks):
+    key_time = f"drink_time_02_{i}"
+    lock_key = f"drink_time_locked_02_{i}"
+    if key_time not in st.session_state:
+        st.session_state[key_time] = start_time + i * 1.0
+    if lock_key not in st.session_state:
+        st.session_state[lock_key] = False
+
 for i in range(n_drinks):
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, start_time, 0.1, key=f"drink_time{i}"))
+        # attach on_change to allow auto-fill of subsequent times
+        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_02_{i}", on_change=_on_change_drink_time, args=(i,)))
+    # visible lock checkbox to prevent cascading changes
+    lock_key = f"drink_time_locked_02_{i}"
+    lock_label = "Lock 🔒" if st.session_state.get(lock_key, False) else "Lock"
+    st.checkbox(lock_label, key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
         drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
     with col3:
@@ -137,13 +174,43 @@ start_time = 12.0
 meal_times = []
 meal_kcals = []
 
-n_meals = st.slider("Number of (solid) meals:", 0, 15, 1)
+def _on_change_n_meals_02():
+    # Use generic seeding/pruning helper for meals on page 02
+    seed_new_items(
+        page="02", name="meal", n=st.session_state.get("n_meals_02", 0), default_start=12.0, step=6.0,
+        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}"
+    )
+
+n_meals = st.slider("Number of (solid) meals:", 0, 15, 1, key="n_meals_02", on_change=_on_change_n_meals_02)
+
+# Lock all / Unlock all controls for meals
+lockm_a, lockm_b = st.columns(2)
+if lockm_a.button("Lock all meals", key="lock_all_meals_02"):
+    lock_all(page="02", what="meal", n=n_meals, locked=True)
+if lockm_b.button("Unlock all meals", key="unlock_all_meals_02"):
+    lock_all(page="02", what="meal", n=n_meals, locked=False)
 
 st.divider()
+
+def _on_change_meal_time_02(index):
+    on_change_time_propagate(page="02", what="meal", index=index, n=st.session_state.get("n_meals_02", 0), step=6.0)
+
+# Initialize meal defaults and locks
+for i in range(n_meals):
+    key_time = f"meal_time_02_{i}"
+    lock_key = f"meal_time_locked_02_{i}"
+    if key_time not in st.session_state:
+        st.session_state[key_time] = start_time + i * 6.0
+    if lock_key not in st.session_state:
+        st.session_state[lock_key] = False
+
 for i in range(n_meals):
     col1, col2 = st.columns(2)
     with col1:
-        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, start_time, 0.1, key=f"meal_time{i}"))
+        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"meal_time_02_{i}", on_change=_on_change_meal_time_02, args=(i,)))
+    lock_key = f"meal_time_locked_02_{i}"
+    lock_label = "Lock 🔒" if st.session_state.get(lock_key, False) else "Lock"
+    st.checkbox(lock_label, key=lock_key, help="Prevent auto-fill changes to this meal time")
     with col2:
         meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 1.0, key=f"meal_kcals{i}"))
     start_time += 6
