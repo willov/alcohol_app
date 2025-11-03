@@ -6,7 +6,7 @@ setup_sidebar()
 
 # Main content
 st.markdown("""
-## Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers  
+## Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers
 
 Secondary alcohol metabolites such as ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC) are important biomarkers for detecting recent alcohol consumption. These metabolites have different time profiles compared to blood alcohol concentration and can be detected for longer periods after alcohol consumption.
 
