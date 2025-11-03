@@ -2,7 +2,7 @@ import streamlit as st
 
 # Setup sidebar
 def setup_sidebar():
-    st.sidebar.title("Alcohol consumption digital twin demos")
+    st.sidebar.header("Alcohol consumption digital twin demos")
     st.sidebar.page_link("Home.py", label="Home")
     st.sidebar.divider()
     st.sidebar.header("Paper 1")
