@@ -207,7 +207,7 @@ if plot_timeseries:
 
     sim_results["Time"] = sim_results["Time"]/24
     sim_results.rename(columns = {"Time":"Time (days)"}, inplace = True)
-    st.line_chart(sim_results, x="Time (days)", y=feature, use_container_width=True)
+    st.line_chart(sim_results, x="Time (days)", y=feature, width=True)
 
 max_dose = st.number_input("Maximum weekly consumption to simulate (g/week)", 0.0, 10000.0, 1000.0, 100.0)
 num_points = st.slider("Number of weekly doses to simulate (more is slower)",10,1000,10,1)
@@ -230,15 +230,15 @@ for gram in dose_response["Ethanol/week (gram)"]:
         dose_response["Simulated PEth (high)"].append(sim_results["PEth (ng/mL)"].values[-1]/PEth_scaling)
 
 fig = go.Figure()
-fig.add_trace(go.Scatter(name="Simulated PEth", x = dose_response["Ethanol/week (gram)"], y=dose_response["Simulated PEth (low)"], showlegend=False, mode='lines', line={"width":0}))
-fig.add_trace(go.Scatter(name="Simulated PEth", x = dose_response["Ethanol/week (gram)"], y=dose_response["Simulated PEth (high)"], fill='tonexty', showlegend=True, mode='none', line={"color":"#636EFA"}))
-fig.add_trace(go.Scatter(name="Reported PEth", x=[drink_grams_total], y=[reported_PEth], marker={"color":"rgb(255, 191, 0)", "size":10}))
-fig.add_trace(go.Scatter(name="Reported PEth", x=[0, max_sim_dose], y=[reported_PEth,reported_PEth], showlegend=False, mode='lines', marker={"line": {"width":0}, "color":"rgb(255, 191, 0)"}))
+fig.add_trace(go.Scatter(name="Simulated PEth", x = dose_response["Ethanol/week (gram)"], y=dose_response["Simulated PEth (low)"], showlegend=False, mode='lines', line=dict(width=2)))
+fig.add_trace(go.Scatter(name="Simulated PEth", x = dose_response["Ethanol/week (gram)"], y=dose_response["Simulated PEth (high)"], fill='tonexty', showlegend=True, mode='none', line=dict(color="#636EFA")))
+fig.add_trace(go.Scatter(name="Reported PEth", x=[drink_grams_total], y=[reported_PEth], marker=dict(color="rgb(255, 191, 0)", size=10)))
+fig.add_trace(go.Scatter(name="Reported PEth", x=[0, max_sim_dose], y=[reported_PEth,reported_PEth], showlegend=False, mode='lines', line=dict(width=2, color="rgb(255, 191, 0)")))
 
 fig.update_layout(xaxis_title="Ethanol/week (gram)", yaxis_title=f"PEth ({PEth_unit})", 
                         legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
                         margin=dict(l=0, r=0, t=0, b=0))
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
 
 #fig.write_image("PEth-prediction.svg")
 weekly_dose_interp_low = interp.interp1d(dose_response["Simulated PEth (low)"], dose_response["Ethanol/week (gram)"])

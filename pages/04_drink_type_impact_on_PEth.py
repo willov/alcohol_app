@@ -201,11 +201,11 @@ for gram in dose_response["Ethanol/week (gram)"]:
         dose_response["Spirit"].append(sim_results["PEth (ng/mL)"].values[-1])
 
 fig = go.Figure()
-fig.add_trace(go.Scatter(name="Beer", x = dose_response["Ethanol/week (gram)"], y=dose_response["Beer"], mode='lines', marker={"line": {"width":0}}))
-fig.add_trace(go.Scatter(name="Spirit", x = dose_response["Ethanol/week (gram)"], y=dose_response["Spirit"], mode='lines', marker={"line": {"width":0}}))
-fig.add_trace(go.Scatter(name="Wine", x = dose_response["Ethanol/week (gram)"], y=dose_response["Wine"], mode='lines', marker={"line": {"width":0}}))
+fig.add_trace(go.Scatter(name="Beer", x = dose_response["Ethanol/week (gram)"], y=dose_response["Beer"], mode='lines', line=dict(width=2)))
+fig.add_trace(go.Scatter(name="Spirit", x = dose_response["Ethanol/week (gram)"], y=dose_response["Spirit"], mode='lines', line=dict(width=2)))
+fig.add_trace(go.Scatter(name="Wine", x = dose_response["Ethanol/week (gram)"], y=dose_response["Wine"], mode='lines', line=dict(width=2)))
 
 fig.update_layout(xaxis_title="Ethanol/week (gram)", yaxis_title="Simulated PEth (ng/ml)", 
                         legend=dict(orientation="h", xanchor="center", y=-0.2, x=0.5),
                         margin=dict(l=0, r=0, t=0, b=0))
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
