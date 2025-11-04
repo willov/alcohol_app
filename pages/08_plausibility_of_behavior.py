@@ -216,7 +216,6 @@ def _on_change_n_drinks_08():
     )
 
 n_drinks = st.slider("Number of drinks:", 1, 5, 2, key="n_drinks_08", on_change=_on_change_n_drinks_08)
-extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1, key="extra_time_demo")
 
 # Lock all / Unlock all controls for drinks
 la, lb = st.columns(2)
