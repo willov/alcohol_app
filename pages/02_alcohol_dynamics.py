@@ -3,9 +3,9 @@ import streamlit as st
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_time_propagate, lock_all, 
-    draw_drink_timeline_plotly, enforce_minimum_time,
-    build_stimulus_dict, create_multi_feature_plot, get_anthropometrics_ui
+    seed_new_items, on_change_time_propagate, lock_all,
+    enforce_minimum_time, build_stimulus_dict, 
+    create_multi_feature_plot, get_anthropometrics_ui
 )
 
 # Setup sund and sidebar
@@ -97,13 +97,6 @@ for i in range(n_drinks):
     with col5:
         drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
     start_time += 1
-
-EtOH_conc = [0]+[c*on for c in drink_concentrations for on in [1 , 0]]
-vol_drink_per_time = [0]+[v/t*on if t>0 else 0 for v,t in zip(drink_volumes, drink_lengths) for on in [1 , 0]]
-kcal_liquid_per_vol = [0]+[k/v*on if v>0 else 0 for v,k in zip(drink_volumes, drink_kcals) for on in [1 , 0]]
-drink_length = [0]+[t*on for t in drink_lengths for on in [1 , 0]]
-t = [t+(l/60)*on for t,l in zip(drink_times, drink_lengths) for on in [0,1]]
-
 
 # Setup meals
 st.subheader(f"Specifying the meals")
