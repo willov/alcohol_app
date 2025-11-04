@@ -19,6 +19,14 @@ setup_sidebar()
 # Setup the model
 model, model_features = setup_model('alcohol_model_2')
 
+# Feature units mapping
+feature_units = {
+    "EtOH": "mg/dL",
+    "UAC": "mg/dL",
+    "EtG": "mg/dL",
+    "EtS": "mg/dL"
+}
+
 st.markdown("# Model Fitting Challenge: Simulate Drinking Patterns")
 st.write("Find a drinking pattern that fits your experimental data!")
 st.markdown("""
@@ -82,7 +90,8 @@ if data_input_method == "Manual Entry":
         with data_cols[1]:
             st.markdown("**Time (h)**")
         with data_cols[2]:
-            st.markdown(f"**{feature} Value**")
+            unit = feature_units.get(feature, "")
+            st.markdown(f"**{feature} Value ({unit})**")
         
         # Set default values based on feature
         feature_defaults = {
@@ -114,6 +123,11 @@ else:  # CSV paste
     st.markdown("#### Paste CSV Data")
     st.markdown(f"Paste data as CSV with columns: `Time`, and one or more of: {', '.join(selected_features)}")
     st.markdown("(comma or tab-separated, first row should be headers)")
+    st.markdown("**Unit specifications for features:**")
+    for feature in selected_features:
+        unit = feature_units.get(feature, "")
+        st.markdown(f"  - **{feature}**: {unit}")
+    st.markdown("- **Time**: hours (h)")
     
     csv_input = st.text_area("Paste your data here:", height=150, placeholder="Time,EtOH,UAC,EtG,EtS\n0.0,100,0,0,0\n1.0,80,5,2,1\n2.0,60,10,5,3")
     
@@ -192,8 +206,9 @@ if any(data_points.values()):
         if data_points[feature]:
             st.markdown(f"**{feature}** ({len(data_points[feature])} points)")
             data_df = pd.DataFrame(data_points[feature])
-            # Rename columns
-            data_df = data_df.rename(columns={'time': 'Time (h)', 'value': f'{feature} Value'})
+            # Rename columns with units
+            unit = feature_units.get(feature, "")
+            data_df = data_df.rename(columns={'time': 'Time (h)', 'value': f'{feature} Value ({unit})'})
             st.dataframe(data_df, width='stretch', hide_index=True)
 else:
     st.warning("No valid data points entered. Please add data above.")
