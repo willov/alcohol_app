@@ -29,7 +29,7 @@ This interactive tool challenges you to find a drinking pattern that matches exp
 3. **Design a drinking pattern** to simulate
 4. **Run the simulation** to see if it matches the data
 
-The simulation is considered successful if all data points are within ±5% of the predicted values.
+The simulation is considered successful if all data points are within the chosen tolerance (default ±5%) of the predicted values.
 """)
 
 st.divider()
@@ -270,6 +270,8 @@ st.header("🔬 Run Simulation and Analyze")
 
 extra_time = st.number_input("Time to simulate after last drink (h):", 0.0, 100.0, 5.0, 0.5, key="extra_time_09")
 
+data_sem = st.number_input("Data SEM (%):", 0.1, 100.0, 5.0, 0.1, key="data_sem_09", help="Standard Error of the Mean tolerance for data points (±%)")
+
 # Validate drink arrays before building stimulus dict
 if len(drink_times) > 0 and len(drink_lengths) > 0:
     # Check all arrays have same length
@@ -321,7 +323,8 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
             sim_results, selected_features, 
             data_points=data_points_dict,
             drink_starts=drink_times,
-            drink_lengths=drink_lengths
+            drink_lengths=drink_lengths,
+            data_sem=data_sem
         )
         
         if fig:
@@ -357,7 +360,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
             interpolated_values = np.interp(data_times, sim_times, sim_values)
             
             # Check tolerance for each point
-            tolerance = 0.05  # ±5%
+            tolerance = data_sem / 100.0  # Convert percentage to decimal
             fits = []
             errors = []
             
@@ -371,7 +374,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
                 else:
                     relative_error = float('inf') if data_value != 0 else 0
                 
-                # Check if within ±5%
+                # Check if within tolerance
                 within_tolerance = relative_error <= tolerance
                 fits.append(within_tolerance)
                 errors.append(relative_error * 100)
@@ -381,7 +384,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
                 'Time (h)': data_times,
                 'Experimental': data_values,
                 'Simulated': interpolated_values,
-                'Within ±5%': ['✅' if fit else '❌' for fit in fits]
+                f'Within ±{data_sem}%': ['✅' if fit else '❌' for fit in fits]
             })
             
             st.dataframe(results_df, width='stretch', hide_index=True)
@@ -393,12 +396,12 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
             if all(fits):
                 st.success(
                     f"✅ **{feature}: Drinking pattern describes data** ✅\n\n"
-                    f"All {total_points} data points are within ±5% tolerance!"
+                    f"All {total_points} data points are within ±{data_sem}% tolerance!"
                 )
             else:
                 st.warning(
                     f"⚠️ **{feature}: Not quite there yet**\n\n"
-                    f"{num_within_tolerance}/{total_points} data points are within ±5% tolerance."
+                    f"{num_within_tolerance}/{total_points} data points are within ±{data_sem}% tolerance."
                 )
             
             all_fits.extend(fits)
@@ -408,7 +411,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
         if all_fits and len(all_fits) > 0 and all(all_fits):
             st.success(
                 f"🎉 **OVERALL SUCCESS! Drinking pattern describes all data** 🎉\n\n"
-                f"All data points across all measured features are within ±5% tolerance!"
+                f"All data points across all measured features are within ±{data_sem}% tolerance!"
             )
             st.balloons()
 

@@ -491,7 +491,7 @@ def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, tit
     return fig
 
 
-def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None):
+def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None, data_sem=5.0):
     """Create a multi-feature Plotly grid plot (1x1 for single feature, nx2 for multiple).
     
     - sim_results: pandas DataFrame with 'Time' column and feature columns
@@ -503,6 +503,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
     - drink_starts: optional list of drink start times (hours)
     - drink_lengths: optional list of drink durations (minutes)
     - data_points: optional dict with feature names as keys and lists of {"time": t, "value": v} as values
+    - data_sem: optional SEM (Standard Error of the Mean) as percentage (default: 5.0)
     
     Returns: plotly Figure object
     """
@@ -590,9 +591,9 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
                     data_times = [float(dp['time']) for dp in data_points[feature]]
                     data_values = [float(dp['value']) for dp in data_points[feature]]
                     
-                    # Calculate ±5% error bars
+                    # Calculate ±SEM error bars
                     data_values_array = np.array(data_values)
-                    error_values = data_values_array * 0.05
+                    error_values = data_values_array * (data_sem / 100.0)
                     
                     # Add experimental data points with error bars
                     fig.add_trace(
@@ -600,7 +601,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
                             x=data_times,
                             y=data_values,
                             mode='markers',
-                            name='Experimental data (±5%)',
+                            name=f'Experimental data (±{data_sem}%)',
                             marker=dict(size=10, color='red', symbol='circle'),
                             error_y=dict(
                                 type='data',
