@@ -164,7 +164,8 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     
     Constructs piecewise constant stimuli for alcohol, volume, kcal intake, and meals.
     
-    Note: drink_lengths are in minutes and converted to hours for time calculations.
+    Note: drink_lengths are in minutes and converted to hours for time vector (t). 
+    The other inputs expect change per minute.
     
     Returns: dict with keys EtOH_conc, vol_drink_per_time, kcal_liquid_per_vol, 
              drink_length, kcal_solid
