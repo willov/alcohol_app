@@ -431,7 +431,7 @@ def on_change_duration_validate_next(page, what, index, n, min_gap=None):
         st.session_state[next_key] = min_allowed
 
 
-def enforce_minimum_time(page, what, index, n, min_gap=None):
+def enforce_minimum_time(page, what, index, min_gap=None):
     """Enforce that an item's time is not before the previous item's time + min_gap.
     
     If the current time is less than the previous item's time + min_gap,
@@ -440,7 +440,6 @@ def enforce_minimum_time(page, what, index, n, min_gap=None):
     - page: page id string (e.g., '02')
     - what: 'drink' or 'meal'
     - index: int index of the item to check
-    - n: total count
     - min_gap: minimum gap from previous item. If None, uses duration of previous item.
                For drinks, this is drink_length (in minutes), for meals it defaults to 0.0.
     """

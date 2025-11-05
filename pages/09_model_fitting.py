@@ -255,7 +255,7 @@ st.divider()
 start_time = 0.0
 
 def _on_change_drink_time_09(index):
-    enforce_minimum_time(page="09", what="drink", index=index, n=st.session_state.get("n_drinks_09", 1), min_gap=None)
+    enforce_minimum_time(page="09", what="drink", index=index, min_gap=None)
     on_change_time_propagate(page="09", what="drink", index=index, n=st.session_state.get("n_drinks_09", 1), step=1.0)
 
 def _on_change_drink_length_09(index):

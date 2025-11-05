@@ -68,7 +68,7 @@ start_time = 18.0
 
 def _on_change_drink_time(index):
     # Enforce that this drink's time is not before the previous drink's time + previous drink's duration
-    enforce_minimum_time(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), min_gap=None)
+    enforce_minimum_time(page="02", what="drink", index=index, min_gap=None)
     # Propagate changes to subsequent unlocked drinks
     on_change_time_propagate(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), step=1.0)
 
@@ -132,7 +132,7 @@ st.divider()
 
 def _on_change_meal_time_02(index):
     # Enforce that this meal's time is not before the previous meal's time + 10 minutes
-    enforce_minimum_time(page="02", what="meal", index=index, n=st.session_state.get("n_meals_02", 0), min_gap=10.0/60.0)  # 10 minutes in hours
+    enforce_minimum_time(page="02", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
     # Propagate changes to subsequent unlocked meals
     on_change_time_propagate(page="02", what="meal", index=index, n=st.session_state.get("n_meals_02", 0), step=6.0)
 

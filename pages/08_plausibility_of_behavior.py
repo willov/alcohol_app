@@ -236,7 +236,7 @@ st.divider()
 start_time = 15.0  # Start at 15:00 (3 PM)
 
 def _on_change_drink_time_08(index):
-    enforce_minimum_time(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
+    enforce_minimum_time(page="08", what="drink", index=index, min_gap=None)
     on_change_time_propagate(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), step=1.0)
     _trigger_simulation_update_08()
 
@@ -246,7 +246,7 @@ def _on_change_drink_length_08(index):
 
 def _on_change_meal_time_08(index):
     # Enforce that this meal's time is not before the previous meal's time + 10 minutes
-    enforce_minimum_time(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), min_gap=10.0/60.0)  # 10 minutes in hours
+    enforce_minimum_time(page="08", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
     on_change_time_propagate(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), step=6.0)
     _trigger_simulation_update_08()
 
@@ -322,7 +322,7 @@ start_time_meal = 12.0
 
 def _on_change_meal_time_08(index):
     # Enforce that this meal's time is not before the previous meal's time + 10 minutes
-    enforce_minimum_time(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), min_gap=10.0/60.0)  # 10 minutes in hours
+    enforce_minimum_time(page="08", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
     on_change_time_propagate(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), step=6.0)
 
 # Initialize meal defaults and locks for page 08
