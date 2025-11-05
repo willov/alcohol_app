@@ -255,28 +255,18 @@ def _trigger_simulation_update_08():
     # This will be called after collecting all drink/meal data
     st.session_state['_should_update_sim_08'] = True
 
-def _refresh_drink_times_08(sex_value, n_drinks_count):
-    """Refresh drink times based on sex and number of drinks."""
+def _refresh_drink_times_08(n_drinks_count):
+    """Refresh drink times with consistent 15-minute spacing."""
     start_time = 15.0
-    sex_based_offset = (2.0 if sex_value == 0.0 else 5.0)
+    min_gap_hours = 0.25  # 15 minutes in hours
     
-    # Set drink 0
-    st.session_state[f"drink_time_08_0"] = start_time
-    
-    # Set drink 1 with sex-based offset
-    if n_drinks_count > 1:
-        st.session_state[f"drink_time_08_1"] = start_time + sex_based_offset
-    
-    # Set subsequent drinks with 1-hour spacing
-    for i in range(2, n_drinks_count):
-        st.session_state[f"drink_time_08_{i}"] = start_time + sex_based_offset + (i - 1) * 1.0
+    # Set all drinks with consistent 15-minute spacing
+    for i in range(n_drinks_count):
+        st.session_state[f"drink_time_08_{i}"] = start_time + i * min_gap_hours
 
-# Initialize drinks using seed_new_items, then handle sex-based spacing for drink 2
-sex_based_offset = (2.0 if anthropometrics["sex"] == 0.0 else 5.0)
-
-# Seed the items with base defaults
+# Initialize drinks using seed_new_items
 seed_new_items(
-    page="08", name="drinks", n=n_drinks, default_start=start_time, step=1.0,
+    page="08", name="drinks", n=n_drinks, default_start=start_time, step=0.25,
     seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
 )
 
