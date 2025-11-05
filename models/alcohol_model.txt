@@ -113,15 +113,15 @@ event_kcal2 = le(Kcal_Solid, 0), Kcal_Solid, 0, max_Kcal_Solid, 0, EtOH_Pool, 0
 ########## OUTPUTS
 
 ########## INPUTS
-EtOH_conc           = EtOH_conc           @ 0
-vol_drink_per_time  = vol_drink_per_time  @ 0
-kcal_liquid_per_vol = kcal_liquid_per_vol @ 0
-kcal_solid          = kcal_solid          @ 0
-drink_length = drink_length @ 0
+EtOH_conc           = EtOH_conc           @ 0       // [%]
+vol_drink_per_time  = vol_drink_per_time  @ 0       // [L/min]
+kcal_liquid_per_vol = kcal_liquid_per_vol @ 0       // [kcal/L]
+kcal_solid          = kcal_solid          @ 0       // [kcal]
+drink_length        = drink_length        @ 0       // [min]
 
-sex                 = sex                 @ 1       // male=1, female=0
-weight              = weight              @ 104     // Kg
-height              = height              @ 1.85    // m
+sex                 = sex                 @ 1       // [male=1, female=0]
+weight              = weight              @ 104     // [kg]
+height              = height              @ 1.85    // [m]
 
 ########## FEATURES
 

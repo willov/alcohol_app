@@ -210,17 +210,17 @@ urinate       = gt(urinate, 0), Urine_Volume, SS_urine_vol, Urine_Mass_EtOH, SS_
 ########## OUTPUTS
 
 ########## INPUTS
-EtOH_conc           = EtOH_conc                     @ 0
-vol_drink_per_time  = vol_drink_per_time            @ 0
-kcal_liquid_per_vol = kcal_liquid_per_vol           @ 0
-meal_kcal           = kcal_solid                    @ 0
+EtOH_conc           = EtOH_conc                     @ 0       // [%]
+vol_drink_per_time  = vol_drink_per_time            @ 0       // [L/min]
+kcal_liquid_per_vol = kcal_liquid_per_vol           @ 0       // [kcal/L]
+meal_kcal           = kcal_solid                    @ 0       // [kcal]
 
-sex                 = sex                           @ 1       // male = 1, female = 0
-weight              = weight                        @ 104     // Kg
-height              = height                        @ 1.85    // m
-age                 = age                           @ 25      // years
+sex                 = sex                           @ 1       // [male=1, female=0]
+weight              = weight                        @ 104     // [kg]
+height              = height                        @ 1.85    // [m]
+age                 = age                           @ 25      // [years]
 
-urinate             = urinate                       @ 0
+urinate             = urinate                       @ 0       // [bool]
 
 ########## FEATURES
 
