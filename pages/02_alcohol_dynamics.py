@@ -30,7 +30,7 @@ Below, you can specify one or more alcoholic drinks, and some anthropometrics to
 # Anthropometrics            
 st.subheader("Anthropometrics")
 
-anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72})
+anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": None})
 
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")

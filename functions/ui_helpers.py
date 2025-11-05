@@ -225,13 +225,14 @@ def get_anthropometrics_ui(defaults=None):
         value=float(st.session_state.get("height", 1.72) or 1.72), 
         key="height"
     )
-    anthropometrics["age"] = st.number_input(
-        "Age (years):", 
-        min_value=0, 
-        max_value=120, 
-        value=int(st.session_state.get("age", 30) or 30),
-        key="age"
-    )
+    if defaults.get("age") is not None:
+        anthropometrics["age"] = st.number_input(
+            "Age (years):", 
+            min_value=0, 
+            max_value=120, 
+            value=int(st.session_state.get("age", 30) or 30),
+            key="age"
+        )
     
     # Convert sex string to numeric (1.0 for male, 0.0 for female)
     anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"])
