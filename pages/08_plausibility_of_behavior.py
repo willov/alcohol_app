@@ -215,6 +215,7 @@ def _on_change_n_drinks_08():
         page="08", name="drinks", n=st.session_state.get("n_drinks_08", 1), default_start=15.0, step=1.0,
         seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
     )
+    _trigger_simulation_update_08()
 
 n_drinks = st.slider("Number of drinks:", 1, 5, 2, key="n_drinks_08", on_change=_on_change_n_drinks_08)
 
@@ -253,6 +254,35 @@ def _trigger_simulation_update_08():
     """Trigger simulation update when drink/meal parameters change."""
     # This will be called after collecting all drink/meal data
     st.session_state['_should_update_sim_08'] = True
+
+def _refresh_drink_times_08(sex_value, n_drinks_count):
+    """Refresh drink times based on sex and number of drinks."""
+    start_time = 15.0
+    sex_based_offset = (2.0 if sex_value == 0.0 else 5.0)
+    
+    # Set drink 0
+    st.session_state[f"drink_time_08_0"] = start_time
+    
+    # Set drink 1 with sex-based offset
+    if n_drinks_count > 1:
+        st.session_state[f"drink_time_08_1"] = start_time + sex_based_offset
+    
+    # Set subsequent drinks with 1-hour spacing
+    for i in range(2, n_drinks_count):
+        st.session_state[f"drink_time_08_{i}"] = start_time + sex_based_offset + (i - 1) * 1.0
+
+# Initialize drinks using seed_new_items, then handle sex-based spacing for drink 2
+sex_based_offset = (2.0 if anthropometrics["sex"] == 0.0 else 5.0)
+
+# Seed the items with base defaults
+seed_new_items(
+    page="08", name="drinks", n=n_drinks, default_start=start_time, step=1.0,
+    seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
+)
+
+# Refresh drink times based on current sex
+_refresh_drink_times_08(anthropometrics["sex"], n_drinks)
+
 for i in range(n_drinks):
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
@@ -267,7 +297,6 @@ for i in range(n_drinks):
         drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 1.0, 0.1, key=f"drink_volumes{i}"))
     with col5:
         drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 135.0, 10.0, key=f"drink_kcals{i}"))
-    start_time += 1
 
 # Setup meals (interactive)
 meal_times = []
