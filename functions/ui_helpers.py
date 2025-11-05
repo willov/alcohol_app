@@ -33,8 +33,7 @@ def setup_model(model_name, model_file_path="./models/", param_file_path=None):
     import sund
     
     sund.install_model(f"{model_file_path}{model_name}.txt")
-    model_class = sund.import_model(model_name)
-    model = model_class()
+    model = sund.load_model(model_name)
     
     # Determine parameter file path
     if param_file_path is None:
