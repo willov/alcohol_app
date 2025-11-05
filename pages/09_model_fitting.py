@@ -277,13 +277,13 @@ for i in range(n_drinks):
     lock_key = f"drink_time_locked_09_{i}"
     st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length_09_{i}", on_change=_on_change_drink_length_09, args=(i,)))
+        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length_09, args=(i,)))
     with col3:
-        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations_09_{i}"))
+        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:
-        drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes_09_{i}"))
+        drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
     with col5:
-        drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 45.0, 10.0, key=f"drink_kcals_09_{i}"))
+        drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 45.0, 10.0, key=f"drink_kcals{i}"))
     start_time += 2
 
 st.divider()
