@@ -7,7 +7,7 @@ import scipy.interpolate as interp
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate_week, 
-    get_drink_specs, init_anthropometrics, build_stimulus_dict, get_anthropometrics_ui
+    get_anthropometrics_ui
 )
 
 # Setup sund and sidebar

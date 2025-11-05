@@ -330,13 +330,6 @@ def prune_session_keys(page, prefix, indices, keys):
                 del st.session_state[full]
 
 
-def ensure_prev_counter(page, name, default=0):
-    key = f"_prev_{name}_{page}"
-    if key not in st.session_state:
-        st.session_state[key] = default
-    return key
-
-
 def seed_new_items(page, name, n, default_start, step, seed_key_template, lock_key_template, key_prefix=None):
     """Seed newly added items for a list field.
 
@@ -430,71 +423,6 @@ def enforce_minimum_time(page, what, index, n, min_gap=None):
         min_allowed = prev_time + min_gap
         if current_time < min_allowed:
             st.session_state[current_key] = min_allowed
-
-
-def draw_drink_timeline_plotly(sim_df, feature, drink_starts, drink_lengths, title=None, uncert_time=None, uncert_min=None, uncert_max=None, uncert_color='rgba(200,200,200,0.25)'):
-    """Return a plotly Figure showing the simulation line and drink-duration rectangles at the bottom.
-
-    - sim_df: pandas DataFrame with 'Time' column (hours) and the feature column
-    - feature: column name to plot
-    - drink_starts: list of start times (hours)
-    - drink_lengths: list of durations (minutes)
-    """
-    try:
-        import plotly.graph_objects as go
-    except Exception:
-        raise
-
-    x = sim_df['Time'].tolist()
-    y = sim_df[feature].tolist() if feature in sim_df.columns else [0] * len(x)
-
-    fig = go.Figure()
-    
-    # Optional uncertainty band
-    if uncert_time is not None and uncert_min is not None and uncert_max is not None:
-        fig.add_trace(
-            go.Scatter(
-                x=list(uncert_time) + list(reversed(uncert_time)), 
-                y=list(uncert_max) + list(reversed(uncert_min)),
-                fill='toself', fillcolor=uncert_color, line=dict(color='rgba(255,255,255,0)'), 
-                hoverinfo='skip', showlegend=True, name='Uncertainty'
-            )
-        )
-
-    # Main simulation line
-    fig.add_trace(go.Scatter(x=x, y=y, mode='lines', name='Simulation', line=dict(color='blue')))
-
-    # Determine y-range and space for timeline
-    y_min = min(y) if y else 0
-    y_max = max(y) if y else 1
-    yrange = y_max - y_min if (y_max - y_min) != 0 else 1.0
-
-    # Timeline occupies bottom 6% of y-range
-    timeline_height = 0.04 * yrange
-    y0 = y_min - 0.02 * yrange
-    y1 = y0 + timeline_height
-
-    # Add colored rectangles for each drink
-    colors = ['rgba(255,127,0,0.4)', 'rgba(127,0,255,0.35)', 'rgba(0,127,255,0.35)', 'rgba(0,200,0,0.35)']
-    for i, start in enumerate(drink_starts):
-        dur_min = drink_lengths[i] if i < len(drink_lengths) else 0
-        end = start + (dur_min / 60.0)
-        color = colors[i % len(colors)]
-        
-        # Rectangle for drink
-        fig.add_shape(
-            type='rect', x0=start, x1=end, y0=y0, y1=y1, fillcolor=color, line=dict(width=0),
-            name=f'drink_{i}'
-        )
-
-    # Update layout
-    fig.update_layout(margin=dict(l=40, r=20, t=80, b=60), hovermode='closest')
-    fig.update_xaxes(title_text='Time (h)')
-    fig.update_yaxes(title_text=feature)
-    if title:
-        fig.update_layout(title=title)
-
-    return fig
 
 
 def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None, data_sem=5.0):

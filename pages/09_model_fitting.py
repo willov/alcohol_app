@@ -8,8 +8,8 @@ from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_time_propagate, lock_all,
-    enforce_minimum_time,
-    build_stimulus_dict, create_multi_feature_plot, get_anthropometrics_ui
+    enforce_minimum_time, build_stimulus_dict, 
+    create_multi_feature_plot, get_anthropometrics_ui
 )
 
 # Setup sund and sidebar
