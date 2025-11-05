@@ -237,24 +237,22 @@ start_time = 15.0  # Start at 15:00 (3 PM)
 def _on_change_drink_time_08(index):
     enforce_minimum_time(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
     on_change_time_propagate(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), step=1.0)
+    _trigger_simulation_update_08()
 
 def _on_change_drink_length_08(index):
     on_change_duration_validate_next(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
+    _trigger_simulation_update_08()
 
-# Initialize session defaults and lock flags
-for i in range(n_drinks):
-    key_time = f"drink_time_08_{i}"
-    lock_key = f"drink_time_locked_08_{i}"
-    if key_time not in st.session_state:
-        # For second drink (i=1), use sex-dependent default: 2h for females, 5h for males
-        if i == 1:
-            drink_time_default = start_time + (2.0 if anthropometrics["sex"] == 0.0 else 5.0)
-        else:
-            drink_time_default = start_time + i * 1.0
-        st.session_state[key_time] = drink_time_default
-    if lock_key not in st.session_state:
-        st.session_state[lock_key] = False
+def _on_change_meal_time_08(index):
+    # Enforce that this meal's time is not before the previous meal's time + 10 minutes
+    enforce_minimum_time(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), min_gap=10.0/60.0)  # 10 minutes in hours
+    on_change_time_propagate(page="08", what="meal", index=index, n=st.session_state.get("n_meals_08", 0), step=6.0)
+    _trigger_simulation_update_08()
 
+def _trigger_simulation_update_08():
+    """Trigger simulation update when drink/meal parameters change."""
+    # This will be called after collecting all drink/meal data
+    st.session_state['_should_update_sim_08'] = True
 for i in range(n_drinks):
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
@@ -358,6 +356,17 @@ if st.button("🚀 Run Simulation", type="primary"):
         st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
         st.session_state['demo_anthropometrics'] = anthropometrics.copy()
     st.success("✅ Simulation complete!")
+
+# Auto-update simulation when drink/meal parameters change
+if st.session_state.get('_should_update_sim_08', False):
+    with st.spinner("Updating simulation..."):
+        first_drink_time = min(drink_times) if drink_times else 15.0
+        extra_time = max_uncert_time_hours  # Total time from start
+        
+        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+    st.session_state['_should_update_sim_08'] = False
+    st.rerun()
 
 # Display results if simulation has been run
 if st.session_state['sim_results'] is not None:
