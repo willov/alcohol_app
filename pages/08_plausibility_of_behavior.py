@@ -8,7 +8,8 @@ from plotly.subplots import make_subplots
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_time_propagate, lock_all, 
+    seed_new_items, on_change_time_propagate,
+    on_change_duration_validate_next, lock_all,
     enforce_minimum_time, build_stimulus_dict,
     create_multi_feature_plot
 )
@@ -237,6 +238,9 @@ def _on_change_drink_time_08(index):
     enforce_minimum_time(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
     on_change_time_propagate(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), step=1.0)
 
+def _on_change_drink_length_08(index):
+    on_change_duration_validate_next(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
+
 # Initialize session defaults and lock flags
 for i in range(n_drinks):
     key_time = f"drink_time_08_{i}"
@@ -258,7 +262,7 @@ for i in range(n_drinks):
     lock_key = f"drink_time_locked_08_{i}"
     st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
+        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length_08, args=(i,)))
     with col3:
         drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:

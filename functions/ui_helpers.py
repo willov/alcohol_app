@@ -386,6 +386,51 @@ def on_change_time_propagate(page, what, index, n, step):
             st.session_state[f"{what}_time_{page}_{j}"] = base_time + (j - index) * step
 
 
+def on_change_duration_validate_next(page, what, index, n, min_gap=None):
+    """Validate the next item's time when an item's duration changes.
+    
+    When an item's duration changes, the next item's start time must still respect
+    the minimum gap from the previous item's end time.
+    
+    - page: page id string (e.g., '02')
+    - what: 'drink' or 'meal'
+    - index: int index that changed
+    - n: total count
+    - min_gap: if provided, use this as the minimum gap; otherwise use duration of current item
+    """
+    # Only validate the next item if it exists
+    next_index = index + 1
+    if next_index >= n:
+        return
+    
+    # Check if the next item is locked - if so, don't change it
+    next_lock_key = f"{what}_time_locked_{page}_{next_index}"
+    if st.session_state.get(next_lock_key, False):
+        return
+    
+    # Get current item's end time
+    current_key = f"{what}_time_{page}_{index}"
+    current_time = st.session_state.get(current_key, 0.0)
+    
+    # Compute the gap to use
+    if min_gap is None:
+        # Get the duration of the current item
+        current_length_key = f"{what}_length{index}"
+        current_length_minutes = st.session_state.get(current_length_key, 0.0)
+        gap = current_length_minutes / 60.0  # Convert minutes to hours
+    else:
+        gap = min_gap
+    
+    min_allowed = current_time + gap
+    
+    # Check next item's time
+    next_key = f"{what}_time_{page}_{next_index}"
+    next_time = st.session_state.get(next_key, 0.0)
+    
+    if next_time < min_allowed:
+        st.session_state[next_key] = min_allowed
+
+
 def enforce_minimum_time(page, what, index, n, min_gap=None):
     """Enforce that an item's time is not before the previous item's time + min_gap.
     

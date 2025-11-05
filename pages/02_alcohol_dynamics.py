@@ -3,8 +3,9 @@ import streamlit as st
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_time_propagate, lock_all, 
-    enforce_minimum_time, build_stimulus_dict, 
+    seed_new_items, on_change_time_propagate,
+    on_change_duration_validate_next, lock_all,
+    enforce_minimum_time, build_stimulus_dict,
     create_multi_feature_plot, get_anthropometrics_ui
 )
 
@@ -71,6 +72,10 @@ def _on_change_drink_time(index):
     # Propagate changes to subsequent unlocked drinks
     on_change_time_propagate(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), step=1.0)
 
+def _on_change_drink_length(index):
+    # When a drink's duration changes, validate that the next drink's time is still valid
+    on_change_duration_validate_next(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), min_gap=None)
+
 # Initialize default times and locked flags when not present in session_state
 for i in range(n_drinks):
     key_time = f"drink_time_02_{i}"
@@ -89,7 +94,8 @@ for i in range(n_drinks):
     lock_key = f"drink_time_locked_02_{i}"
     st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
     with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}"))
+        # attach on_change to re-validate next drink's minimum time when duration changes
+        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length, args=(i,)))
     with col3:
         drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:
