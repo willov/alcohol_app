@@ -55,6 +55,9 @@ def _on_sex_change():
         key_time = f"drink_time_08_{i}"
         if key_time in st.session_state:
             del st.session_state[key_time]
+        lock_key = f"drink_time_locked_08_{i}"
+        if lock_key in st.session_state:
+            del st.session_state[lock_key]
     # Clear simulation results so they get recalculated
     if 'sim_results' in st.session_state:
         del st.session_state['sim_results']
@@ -270,8 +273,8 @@ seed_new_items(
     seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
 )
 
-# Refresh drink times based on current sex
-_refresh_drink_times_08(anthropometrics["sex"], n_drinks)
+# Reset drink times on sex change
+_refresh_drink_times_08(n_drinks)
 
 for i in range(n_drinks):
     col1, col2, col3, col4, col5 = st.columns(5)
