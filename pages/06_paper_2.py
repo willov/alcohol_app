@@ -19,6 +19,9 @@ Here you can specify anthropometrics and define a set of drinks and meals to sim
 
 [The second use-case enables you to evaluate the plausibility of claimed alcohol consumption](Plausability_of_behaviour) by comparing model predictions with measured biomarker data. You can see how the model's uncertainty bounds compare with actual measurements, and explore how different drinking scenarios affect the predicted metabolite profiles.
 
+[The third use-case allows you evaluate a reported drinking pattern by comparing it to measured data](Model_fitting). You can input your own measured biomarker levels (or use the defaults in the example) and should then try to find a drinking pattern that gives simulations that agree with the measured data. 
+            
+
 We hope that this model and these applications can provide insights into secondary metabolite dynamics and support more informed interpretation of biomarker measurements.
 
 **👈 Select a demo from the sidebar** to explore the interactive demonstrations!
@@ -30,7 +33,7 @@ This section contains three interactive demonstrations:
 
 - **Alcohol secondary metabolites dynamics** - Simulate drinks and observe the time course of EtG, EtS, and UAC
 - **Plausibility of behavior** - Evaluate claimed drinking patterns against measured biomarker levels and model uncertainty
-- **Fit experimental data** - Input your own data points and try to find a drinking pattern that fits the experimental data.
+- **Evaluate drinking against data** - Input your own data points and try to find a drinking pattern that fits the measured data.
 
 ---
 

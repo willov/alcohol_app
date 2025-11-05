@@ -27,17 +27,21 @@ feature_units = {
     "EtS": "mg/dL"
 }
 
-st.markdown("# Model Fitting Challenge: Simulate Drinking Patterns")
-st.write("Find a drinking pattern that fits your experimental data!")
 st.markdown("""
-This interactive tool challenges you to find a drinking pattern that matches experimental measurements. 
+# Model Fitting Challenge: Evaluating Drinking Patterns
+
+In this demonstration, you take the role of a scientist trying to find a drinking pattern that is consistent with measured biomarker data.
+
+The interactive tool allows you to enter custom data, and challenges you to find a drinking pattern that matches measured data.
 
 1. **Input your data points** (Time and measured value)
 2. **Specify anthropometrics** for your subject
 3. **Design a drinking pattern** to simulate
 4. **Run the simulation** to see if it matches the data
 
-The simulation is considered successful if all data points are within the chosen tolerance (default ±5%) of the predicted values.
+The simulation is considered successful if all data points are within the chosen tolerance (default ±5%) of the predicted values. 
+            
+Can you find a drinking pattern that fits the data?
 """)
 
 st.divider()
@@ -435,11 +439,11 @@ st.divider()
 st.markdown("""
 ### Tips for Finding the Right Drinking Pattern:
 
-1. **Start Simple**: Begin with a single drink and gradually add more if needed
-2. **Vary Timing**: Adjust the timing of drinks to match peaks and valleys in the data
-3. **Adjust Volume/Strength**: Change drink volume and ABV to match data magnitude
-4. **Consider Duration**: The drinking period affects the concentration profile
-5. **Use the Lock Feature**: Lock successful drink parameters when experimenting with others
+1. **Start simple**: Begin with a single drink and gradually add more if needed
+2. **Vary timing**: Adjust the timing of drinks to match peaks and valleys in the data
+3. **Adjust volume/strength**: Change drink volume and ABV to match data magnitude
+4. **Consider duration**: The drinking period affects the concentration profile
+5. **Use the lock feature**: Lock successful drink parameters when experimenting with others
 
 Good luck! 🍻
 """)
