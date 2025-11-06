@@ -69,12 +69,19 @@ start_time = 18.0
 def _on_change_drink_time(index):
     # Enforce that this drink's time is not before the previous drink's time + previous drink's duration
     enforce_minimum_time(page="02", what="drink", index=index, min_gap=None)
-    # Propagate changes to subsequent unlocked drinks
-    on_change_time_propagate(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), step=1.0)
+    # Validate that all subsequent drinks still respect their constraints
+    # Only adjust if they conflict, don't propagate arbitrary time changes
+    n_drinks = st.session_state.get("n_drinks_02", 1)
+    for j in range(index + 1, n_drinks):
+        enforce_minimum_time(page="02", what="drink", index=j, min_gap=None)
 
 def _on_change_drink_length(index):
     # When a drink's duration changes, validate that the next drink's time is still valid
     on_change_duration_validate_next(page="02", what="drink", index=index, n=st.session_state.get("n_drinks_02", 1), min_gap=None)
+    # After updating the next drink if needed, also validate all subsequent drinks
+    n_drinks = st.session_state.get("n_drinks_02", 1)
+    for j in range(index + 2, n_drinks):
+        enforce_minimum_time(page="02", what="drink", index=j, min_gap=None)
 
 # Initialize default times and locked flags when not present in session_state
 for i in range(n_drinks):
