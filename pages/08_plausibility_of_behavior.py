@@ -224,12 +224,26 @@ st.divider()
 start_time = 15.0  # Start at 15:00 (3 PM)
 
 def _on_change_drink_time_08(index):
+    # Enforce minimum time constraint with previous drink
     enforce_minimum_time(page="08", what="drink", index=index, min_gap=None)
-    on_change_time_propagate(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), step=1.0)
+    
+    # Validate that all subsequent drinks still respect their constraints
+    # Only adjust if they conflict, don't propagate arbitrary time changes
+    n_drinks = st.session_state.get("n_drinks_08", 1)
+    for j in range(index + 1, n_drinks):
+        enforce_minimum_time(page="08", what="drink", index=j, min_gap=None)
+    
     _trigger_simulation_update_08()
 
 def _on_change_drink_length_08(index):
+    # Validate that the next drink's time still respects the constraint
     on_change_duration_validate_next(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
+    
+    # After updating the next drink if needed, also validate all subsequent drinks
+    n_drinks = st.session_state.get("n_drinks_08", 1)
+    for j in range(index + 2, n_drinks):
+        enforce_minimum_time(page="08", what="drink", index=j, min_gap=None)
+    
     _trigger_simulation_update_08()
 
 def _on_change_meal_time_08(index):
@@ -257,9 +271,6 @@ seed_new_items(
     page="08", name="drinks", n=n_drinks, default_start=start_time, step=0.25,
     seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
 )
-
-# Reset drink times on sex change
-_refresh_drink_times_08(n_drinks)
 
 for i in range(n_drinks):
     col1, col2, col3, col4, col5 = st.columns(5)
