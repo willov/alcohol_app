@@ -57,6 +57,10 @@ def _on_sex_change():
         lock_key = f"drink_time_locked_08_{i}"
         if lock_key in st.session_state:
             del st.session_state[lock_key]
+    # Clear anthropometric session state so defaults get recalculated
+    for key in ["weight_08", "height_08", "age_08"]:
+        if key in st.session_state:
+            del st.session_state[key]
     # Clear simulation results so they get recalculated
     if 'sim_results' in st.session_state:
         del st.session_state['sim_results']
@@ -185,11 +189,27 @@ st.markdown("Specify your own drinking pattern and anthropometric characteristic
 st.subheader("Anthropometrics")
 
 st.write(f"**Sex:** {showcase_sex} (linked to showcase selection)")
+
+# Set defaults based on sex
+if showcase_sex == "Man":
+    default_weight = 106.6
+    default_height = 1.86
+    default_age = 28
+else:
+    default_weight = 62.7
+    default_height = 1.69
+    default_age = 22
+
+# Force update session state with new defaults
+st.session_state["weight_08"] = default_weight
+st.session_state["height_08"] = default_height
+st.session_state["age_08"] = default_age
+
 anthropometrics = {
     "sex": float(showcase_sex.lower() in ["male", "man", "men", "boy", "1", "chap", "guy"]),
-    "weight": st.number_input("Weight (kg):", 0.0, 200.0, 70.0, 1.0, key="weight_08"),
-    "height": st.number_input("Height (m):", 0.0, 2.5, 1.72, key="height_08"),
-    "age": st.number_input("Age (years):", 0, 120, 30, key="age_08")
+    "weight": st.number_input("Weight (kg):", 0.0, 200.0, default_weight, 1.0, key="weight_08"),
+    "height": st.number_input("Height (m):", 0.0, 2.5, default_height, key="height_08"),
+    "age": st.number_input("Age (years):", 0, 120, default_age, key="age_08")
 }
 
 # Specifying the drinks
