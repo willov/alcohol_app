@@ -378,24 +378,6 @@ def lock_all(page, what, n, locked=True):
         st.session_state[f"{what}_time_locked_{page}_{i}"] = locked
 
 
-def on_change_time_propagate(page, what, index, n, step):
-    """Propagate time changes forward for an item list (drinks or meals).
-
-    - what: 'drink' or 'meal'
-    - index: int index that changed
-    - n: total count
-    - step: hours to add per subsequent item
-    """
-    base_key = f"{what}_time_{page}_{index}"
-    base_time = st.session_state.get(base_key, None)
-    if base_time is None:
-        return
-    for j in range(index + 1, n):
-        lock_key = f"{what}_time_locked_{page}_{j}"
-        if not st.session_state.get(lock_key, False):
-            st.session_state[f"{what}_time_{page}_{j}"] = base_time + (j - index) * step
-
-
 def on_change_duration_validate_next(page, what, index, n, min_gap=None):
     """Validate the next item's time when an item's duration changes.
     
