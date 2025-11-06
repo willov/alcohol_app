@@ -45,7 +45,7 @@ with open("./data/data_hip_flask_scenarios.json", 'r') as f:
     data_scenarios = json.load(f)
 
 # === SHOWCASE SECTION ===
-st.header("📊 Showcase: Model Uncertainty vs Measured Data")
+st.header("Showcase: model uncertainty vs measured data")
 st.markdown("This section displays the model's prediction uncertainty compared to actual measured data from controlled experiments.")
 
 # Sex toggle for showcase
@@ -69,7 +69,7 @@ showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="s
 
 
 # Create 4-panel plot (BAC, UAC, EtG, EtS) - Interactive Plotly version
-st.subheader(f"Model prediction of wine + vodka scenario ({showcase_sex})")
+st.subheader(f"Model prediction of wine + vodka scenario ({showcase_sex})".capitalize())
 
 features_to_plot = ["EtOH", "UAC", "EtG", "EtS"]
 feature_labels = ["BAC", "UAC", "EtG", "EtS"]
@@ -188,13 +188,13 @@ st.plotly_chart(fig, use_container_width=True, key="showcase_plot")
 
 # Add drink timeline visualization
 if showcase_sex == "Man":
-    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 0.25, 0.5, 0.75 h | 🍸 Vodka at t=5 h")
+    st.markdown("**Drink timeline:** Wine at t=0, 0.25, 0.5, 0.75 h | Vodka at t=5 h")
 else:
-    st.markdown("**Drink timeline:** 🍷 Wine at t=0, 0.25, 0.5, 0.75 h | 🍸 Vodka at t=2 h")
+    st.markdown("**Drink timeline:** Wine at t=0, 0.25, 0.5, 0.75 h | Vodka at t=2 h")
 st.divider()
 
 # === INTERACTIVE DEMO SECTION ===
-st.header("🔬 Interactive Demo: Simulate Your Own Scenario")
+st.header("Interactive demo: simulate your own scenario")
 st.markdown("Specify your own drinking pattern and anthropometric characteristics to simulate alcohol kinetics. The simulation will run for the same duration as the model uncertainty data (~24 hours), allowing full comparison of your scenario against the uncertainty bounds (no measured data shown in this section). This is a tool intended for exploration and educational purposes, where you are intended to investigate how different claimed drinking patterns and anthropometrics affect the predicted alcohol kinetics.")
 
 # Anthropometrics            
@@ -366,7 +366,7 @@ if uncert_data:
                 max_uncert_time_hours = max(max_uncert_time_hours, max_time)
 
 # Run simulation button
-if st.button("🚀 Run Simulation", type="primary"):
+if st.button("Run Simulation", type="primary"):
     with st.spinner("Running simulation..."):
         # Calculate extra_time needed to reach the uncertainty data duration
         # The simulation should cover the same time range as the uncertainty data
@@ -432,6 +432,6 @@ if st.session_state['sim_results'] is not None:
         if fig:
             st.plotly_chart(fig, use_container_width=True, key=f"plot_08_multi")
     else:
-        st.info("👆 Select at least one feature to plot.")
+        st.info("Select at least one feature to plot.")
 else:
-    st.info("👆 Click the button above to run the simulation with your chosen parameters.")
+    st.info("Click the button above to run the simulation with your chosen parameters.")

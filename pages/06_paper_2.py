@@ -39,7 +39,7 @@ This section contains three interactive demonstrations:
 
 ### Citation
 
-This application is a companion to the upcoming publication on secondary alcohol metabolites modeling.
+This application is a companion to a submitted manuscript on secondary alcohol metabolites modeling.
 
-If you use this application, please check back for citation details.
+If you use this application, please check back for citation details once the manuscript is published.
 """)

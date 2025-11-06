@@ -8,10 +8,9 @@ setup_sidebar()
 st.sidebar.success("Select a demo above.")
 
 # Main content
-st.write("# Welcome! 👋")
 st.markdown(
 """
-## A digital twin for alcohol consumption — quick overview
+## A digital twin for alcohol consumption 
 
 This project provides an open, interactive implementation of a physiologically based digital twin for alcohol consumption. The apps below let researchers and practitioners explore how different drinking patterns and individual characteristics influence short-term biomarkers (blood alcohol, breath alcohol, urine alcohol) and longer-term clinical markers (plasma PEth), and how secondary metabolites (EtG, EtS) behave after drinking.
 
@@ -25,10 +24,7 @@ The demonstrations have originally been developed as a companion to two academic
 
 This paper presents a mechanistic, physiologically based digital twin that reproduces real-life ethanol kinetics across drink types and individuals. It describes how the blood alcohol concentration is affected by pairing the alcohol with different drinks and meals. It also links short-term ethanol exposure to the formation of long-term PEth, enabling personalized simulations and comparisons against measured PEth levels. The paper was published in npj Digital Medicine in 2024.
 
-**Quick link paper 1:**
-
-- Alcohol dynamics, PEth-related demos ([open Paper 1 demos](paper_1))
-
+Additional information is available in the [*About* section](paper_1) for *Paper 1* in the sidebar.
 #### Citation
 
 This application is a companion to the publication "A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth.", 
@@ -44,7 +40,7 @@ If you use this application, please cite as:
 
 ### Paper 2 — Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers
 
-This extended model incorporates secondary metabolites (EtG, EtS) and urine alcohol concentration, highlighting their different time windows and utility for detecting recent drinking. The paper focuses on how these metabolites behave after typical drinking scenarios and how model uncertainty affects forensic interpretation. The paper have been submitted for peer-review in November 2025.
+This extended model incorporates secondary metabolites (EtG, EtS) and urine alcohol concentration, highlighting their different time windows and utility for detecting recent drinking. The paper focuses on how these metabolites behave after typical drinking scenarios, and how the model can be used to assist in forensic interpretation, particularly in the context of drunk driving. The paper have been submitted for peer-review in November 2025.
 
 **Quick link paper 2:**
 

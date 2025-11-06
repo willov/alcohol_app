@@ -48,7 +48,7 @@ Can you find a drinking pattern that fits the data?
 st.divider()
 
 # === DATA INPUT SECTION ===
-st.header("📊 Your Experimental Data")
+st.header("Defining measured data")
 st.markdown("Enter measured data points (time in hours, measured value). You can add data for **EtOH, UAC, EtG, and/or EtS** - all are optional.")
 
 # Feature selection - allow multiple features
@@ -221,14 +221,14 @@ else:
 st.divider()
 
 # === ANTHROPOMETRICS SECTION ===
-st.header("👤 Subject Anthropometrics")
+st.header("Subject Anthropometrics")
 
 anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
 
 st.divider()
 
 # === DRINKING PATTERN SECTION ===
-st.header("🍷 Design Your Drinking Pattern")
+st.header("Design Your Drinking Pattern")
 
 def _on_change_n_drinks_09():
     seed_new_items(
@@ -295,7 +295,7 @@ for i in range(n_drinks):
 st.divider()
 
 # === SIMULATION SECTION ===
-st.header("🔬 Run Simulation and Analyze")
+st.header("Run Simulation and Analyze")
 
 extra_time = st.number_input("Time to simulate after last drink (h):", 0.0, 100.0, 5.0, 0.5, key="extra_time_09")
 
@@ -318,7 +318,7 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
         )
         
         # Run simulation button
-        if st.button("🚀 Run Simulation", type="primary", key="run_sim_09"):
+    if st.button("Run Simulation", type="primary", key="run_sim_09"):
             if not any(data_points.values()):
                 st.error("Please enter at least one data point before running simulation.")
             else:
@@ -329,9 +329,9 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
                         st.session_state['data_points_09'] = data_points
                         st.session_state['selected_features_09'] = selected_features
                         st.session_state['anthropometrics_09'] = anthropometrics.copy()
-                        st.success("✅ Simulation complete!")
+                        st.success("Simulation complete!")
                     except Exception as e:
-                        st.error(f"❌ Simulation failed: {str(e)}")
+                        st.error(f"Simulation failed: {str(e)}")
 else:
     st.warning("Please configure at least one drink before running simulation.")
 
@@ -341,7 +341,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
     data_points_dict = st.session_state['data_points_09']
     selected_features = st.session_state['selected_features_09']
     
-    st.subheader("📈 Comparison: Simulation vs Experimental Data")
+    st.subheader("Comparison: Simulation vs Experimental Data")
     
     # Check if there's any data to compare
     if not any(data_points_dict.values()):
@@ -429,7 +429,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
                 )
             else:
                 st.warning(
-                    f"⚠️ **{feature}: Not quite there yet**\n\n"
+                    f"**{feature}: Not quite there yet**\n\n"
                     f"{num_within_tolerance}/{total_points} data points are within ±{data_sem}% tolerance."
                 )
             
@@ -439,10 +439,9 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
         # Overall success message if all features and points are within tolerance
         if all_fits and len(all_fits) > 0 and all(all_fits):
             st.success(
-                f"🎉 **OVERALL SUCCESS! Drinking pattern describes all data** 🎉\n\n"
+                f"**OVERALL SUCCESS! Drinking pattern describes all data**\n\n"
                 f"All data points across all measured features are within ±{data_sem}% tolerance!"
             )
-            st.balloons()
 
 st.divider()
 
@@ -455,5 +454,5 @@ st.markdown("""
 4. **Consider duration**: The drinking period affects the concentration profile
 5. **Use the lock feature**: Lock successful drink parameters when experimenting with others
 
-Good luck! 🍻
+Good luck!
 """)
