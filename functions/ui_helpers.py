@@ -559,7 +559,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
                     y=sim_results[feature],
                     mode='lines',
                     name='Simulation',
-                    line=dict(width=2, color=demo_color) if demo_color else dict(width=2),
+                    line=dict(width=2, color='blue'),
                     showlegend=(idx == 0),
                     legendgroup='simulation'
                 ),
