@@ -246,16 +246,6 @@ def _on_change_drink_length_08(index):
     
     _trigger_simulation_update_08()
 
-def _on_change_meal_time_08(index):
-    # Enforce that this meal's time is not before the previous meal's time + 10 minutes
-    enforce_minimum_time(page="08", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
-    # Validate that all subsequent meals still respect their constraints
-    # Only adjust if they conflict, don't propagate arbitrary time changes
-    n_meals = st.session_state.get("n_meals_08", 0)
-    for j in range(index + 1, n_meals):
-        enforce_minimum_time(page="08", what="meal", index=j, min_gap=10.0/60.0)
-    _trigger_simulation_update_08()
-
 def _trigger_simulation_update_08():
     """Trigger simulation update when drink/meal parameters change."""
     # This will be called after collecting all drink/meal data
