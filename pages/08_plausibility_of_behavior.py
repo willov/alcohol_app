@@ -445,6 +445,53 @@ if st.session_state['sim_results'] is not None:
         
         if fig:
             st.plotly_chart(fig, use_container_width=True, key=f"plot_08_multi")
+        
+        # === COMPLIANCE CHECK PER FEATURE ===
+        # Use sim_df (adjusted times) for compliance check to match the plot
+        sim_times = sim_df['Time'].values
+        
+        for feature in selected_features:
+            if not uncert_data or demo_scenario not in uncert_data or feature not in uncert_data[demo_scenario]:
+                continue
+            
+            if feature not in sim_df.columns:
+                continue
+            
+            feat_data = uncert_data[demo_scenario][feature]
+            uncert_times = np.array(feat_data['Time']) / 60.0
+            uncert_max = np.array(feat_data['Max'])
+            uncert_min = np.array(feat_data['Min'])
+            sim_values = sim_df[feature].values
+            
+            # Check if all points (within simulation range) are within bounds
+            all_within = True
+            checked_count = 0
+            failures = []
+            
+            # Small tolerance for numerical precision issues
+            tolerance = 1e-6
+            
+            for uncert_t, uncert_max_val, uncert_min_val in zip(uncert_times, uncert_max, uncert_min):
+                # Only check points that are within the simulation time range
+                if uncert_t >= sim_times.min() and uncert_t <= sim_times.max():
+                    sim_val = np.interp(uncert_t, sim_times, sim_values)
+                    checked_count += 1
+                    # Add tolerance for floating point comparisons
+                    if not (uncert_min_val - tolerance <= sim_val <= uncert_max_val + tolerance):
+                        all_within = False
+                        failures.append((uncert_t, sim_val, uncert_min_val, uncert_max_val))
+            
+            # Display per-feature indicator (only if we checked at least one point)
+            if checked_count > 0:
+                if all_within:
+                    st.success(f"✅ **{feature}** - within target interval")
+                else:
+                    with st.expander(f"❌ **{feature}** - outside target interval (click for details)"):
+                        st.write(f"Checked {checked_count} points, {len(failures)} failed")
+                        for t, sim_val, min_val, max_val in failures[:3]:  # Show first 3 failures
+                            st.write(f"t={t:.2f}h: sim={sim_val:.4f}, bounds=[{min_val:.4f}, {max_val:.4f}]")
+            else:
+                st.info(f"ℹ️ **{feature}** - no data in simulation range")
     else:
         st.info("Select at least one feature to plot.")
 else:
