@@ -94,7 +94,7 @@ def simulate(model, anthropometrics, stim, extra_time=10):
     sim_results = pd.DataFrame(sim.feature_values, columns=sim.feature_names)
     sim_results.insert(0, 'Time', sim.time_vector)
     
-    t_start_drink = min(stim["EtOH_conc"]["t"]) - 0.25
+    t_start_drink = min(stim["EtOH_conc"]["t"]) 
     sim_drink_results = sim_results[(sim_results['Time'] >= t_start_drink)]
     
     return sim_drink_results
