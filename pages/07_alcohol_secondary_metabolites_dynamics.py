@@ -127,7 +127,11 @@ st.divider()
 def _on_change_meal_time_07(index):
     # Enforce that this meal's time is not before the previous meal's time + 10 minutes
     enforce_minimum_time(page="07", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
-    on_change_time_propagate(page="07", what="meal", index=index, n=st.session_state.get("n_meals_07", 0), step=6.0)
+    # Validate that all subsequent meals still respect their constraints
+    # Only adjust if they conflict, don't propagate arbitrary time changes
+    n_meals = st.session_state.get("n_meals_07", 0)
+    for j in range(index + 1, n_meals):
+        enforce_minimum_time(page="07", what="meal", index=j, min_gap=10.0/60.0)
 
 # Initialize meal defaults and locks
 for i in range(n_meals):
