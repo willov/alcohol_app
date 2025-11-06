@@ -21,7 +21,7 @@ model_features = [feature for feature in model_features if feature not in ['Acet
 st.markdown("# Drink type impact on PEth")
 st.subheader("Anthropometrics")
 
-anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 104.0, "height": 1.85})
+anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 104.0, "height": 1.85, "age": None})
 
 # Simulating anthropometric differences
 st.subheader("Simulating differences based on drink")

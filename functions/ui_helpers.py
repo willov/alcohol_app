@@ -149,10 +149,14 @@ def init_anthropometrics(defaults=None):
     
     keys = ["sex", "weight", "height", "age"]
     
-    # Initialize session state
+    # Initialize session state only for keys that have non-None defaults
     for key in keys:
+        default_val = defaults.get(key, None)
         if key not in st.session_state:
-            st.session_state[key] = defaults.get(key, None)
+            st.session_state[key] = default_val
+        # If this key's default is not None but session state is None, update it
+        elif default_val is not None and st.session_state[key] is None:
+            st.session_state[key] = default_val
     
     return {key: st.session_state[key] for key in keys}
 

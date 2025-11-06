@@ -25,7 +25,7 @@ st.markdown("# Evaluating reported PEth levels")
 # Anthropometrics            
 st.subheader("Anthropometrics")
 
-anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 104.0, "height": 1.85})
+anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 104.0, "height": 1.85, "age": None})
 
 # Simulating long term PEth
 st.divider()
