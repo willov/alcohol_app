@@ -276,9 +276,9 @@ for i in range(n_drinks):
     with col3:
         drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
     with col4:
-        drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 1.0, 0.1, key=f"drink_volumes{i}"))
+        drink_volumes.append(st.number_input("Vol (L)", 0.0, 2.0, 1.0, 0.1, key=f"drink_volumes{i}"))
     with col5:
-        drink_kcals.append(st.number_input("kcal/L", 0.0, 1000.0, 135.0, 10.0, key=f"drink_kcals{i}"))
+        drink_kcals.append(st.number_input("kcal/L", 0.0, 600.0, 133.0, 10.0, key=f"drink_kcals{i}"))
 
 # Setup meals (interactive)
 meal_times = []
