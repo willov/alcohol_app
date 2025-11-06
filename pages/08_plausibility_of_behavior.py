@@ -74,7 +74,20 @@ showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="s
 # Create 4-panel plot (BAC, UAC, EtG, EtS) - Interactive Plotly version
 st.subheader(f"Model prediction of wine + vodka scenario ({showcase_sex})".capitalize())
 
-features_to_plot = ["EtOH", "UAC", "EtG", "EtS"]
+# Mapping from display names to data keys
+display_to_data_key = {
+    "Blood alcohol concentration (mg/dL)": "EtOH",
+    "Urine alcohol concentration (mg/dL)": "UAC",
+    "Ethyl glucuronide (mg/dL)": "EtG",
+    "Ethyl sulphate (mg/dL)": "EtS"
+}
+
+features_to_plot = [
+    "Blood alcohol concentration (mg/dL)", 
+    "Urine alcohol concentration (mg/dL)", 
+    "Ethyl glucuronide (mg/dL)", 
+    "Ethyl sulphate (mg/dL)"
+]
 feature_labels = ["BAC", "UAC", "EtG", "EtS"]
 feature_ylabels = ["mg/dL", "mg/dL", "", ""]
 
@@ -96,17 +109,20 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
     row_idx = (idx // 2) + 1
     col_idx = (idx % 2) + 1
     
+    # Get the data key for this feature
+    data_key = display_to_data_key.get(feat, feat)
+    
     # Get plotting_info from data if available
     plot_info = {}
     if showcase_sex in data_scenarios:
         obs_data = data_scenarios[showcase_sex].get('Observables', {})
-        if feat in obs_data:
-            plot_info = obs_data[feat].get('plotting_info', {})
+        if data_key in obs_data:
+            plot_info = obs_data[data_key].get('plotting_info', {})
     
     # Plot uncertainty band
     if uncert_data and showcase_sex in uncert_data:
-        if feat in uncert_data[showcase_sex]:
-            feat_data = uncert_data[showcase_sex][feat]
+        if data_key in uncert_data[showcase_sex]:
+            feat_data = uncert_data[showcase_sex][data_key]
             time = np.array(feat_data['Time']) / 60.0  # Convert minutes to hours
             max_val = np.array(feat_data['Max'])
             min_val = np.array(feat_data['Min'])
@@ -130,9 +146,9 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
     # Plot measured data points
     if showcase_sex in data_scenarios:
         obs_data = data_scenarios[showcase_sex]['Observables']
-        if feat in obs_data:
-            time_data = obs_data[feat]['Time']
-            mean_data = obs_data[feat]['Mean']
+        if data_key in obs_data:
+            time_data = obs_data[data_key]['Time']
+            mean_data = obs_data[data_key]['Mean']
             # Filter out NaN values
             valid_idx = [i for i, val in enumerate(mean_data) if not (isinstance(val, float) and np.isnan(val))]
             time_valid = [time_data[i] / 60.0 for i in valid_idx]  # Convert minutes to hours
@@ -409,7 +425,12 @@ if st.session_state['sim_results'] is not None:
     demo_anthropometrics = st.session_state['demo_anthropometrics']
     
     # Define allowed features for page 08
-    allowed_features = ["EtOH", "UAC", "EtG", "EtS"]
+    allowed_features = [
+        "Blood alcohol concentration (mg/dL)", 
+        "Urine alcohol concentration (mg/dL)", 
+        "Ethyl glucuronide (mg/dL)", 
+        "Ethyl sulphate (mg/dL)"
+    ]
     available_features = [f for f in allowed_features if f in model_features]
     
     # Select features to plot
@@ -421,8 +442,13 @@ if st.session_state['sim_results'] is not None:
         demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
         
         # Map feature names (model uses different names)
-        feature_map = {"BAC": "EtOH", "EtOH": "EtOH", "UAC": "UAC", "EtG": "EtG", "EtS": "EtS"}
-        
+        feature_map = {
+            "Blood alcohol concentration (mg/dL)": "EtOH", 
+            "Urine alcohol concentration (mg/dL)": "UAC", 
+            "Ethyl glucuronide (mg/dL)": "EtG", 
+            "Ethyl sulphate (mg/dL)": "EtS"
+        }
+
         # Adjust sim_results time to start at 0 for plotting against uncertainty
         sim_df = sim_results.copy()
         sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
@@ -451,13 +477,16 @@ if st.session_state['sim_results'] is not None:
         sim_times = sim_df['Time'].values
         
         for feature in selected_features:
-            if not uncert_data or demo_scenario not in uncert_data or feature not in uncert_data[demo_scenario]:
+            # Get the data key for this feature
+            data_key = display_to_data_key.get(feature, feature)
+            
+            if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
                 continue
             
             if feature not in sim_df.columns:
                 continue
             
-            feat_data = uncert_data[demo_scenario][feature]
+            feat_data = uncert_data[demo_scenario][data_key]
             uncert_times = np.array(feat_data['Time']) / 60.0
             uncert_max = np.array(feat_data['Max'])
             uncert_min = np.array(feat_data['Min'])

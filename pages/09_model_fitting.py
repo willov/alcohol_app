@@ -19,10 +19,10 @@ model, model_features = setup_model('alcohol_model_2')
 
 # Feature units mapping
 feature_units = {
-    "EtOH": "mg/dL",
-    "UAC": "mg/dL",
-    "EtG": "mg/dL",
-    "EtS": "mg/dL"
+    "Blood alcohol concentration (mg/dL)": "mg/dL",
+    "Urine alcohol concentration (mg/dL)": "mg/dL",
+    "Ethyl glucuronide (mg/dL)": "mg/dL",
+    "Ethyl sulphate (mg/dL)": "mg/dL"
 }
 
 st.markdown("""
@@ -38,7 +38,7 @@ The interactive tool allows you to enter custom data, and challenges you to find
 4. **Run the simulation** to see if it matches the data
 
 The simulation is considered successful if all data points are within the chosen tolerance (default ±5%) of the predicted values. 
-            
+
 Can you find a drinking pattern that fits the data?
 """)
 
@@ -46,10 +46,16 @@ st.divider()
 
 # === DATA INPUT SECTION ===
 st.header("Defining measured data")
-st.markdown("Enter measured data points (time in hours, measured value). You can add data for **EtOH, UAC, EtG, and/or EtS** - all are optional.")
+st.markdown("Enter measured data points (time in hours, measured value). You can add data for **BAC, UAC, EtG, and/or EtS** - all are optional.")
 
 # Feature selection - allow multiple features
-available_features = [f for f in model_features if f in ["EtOH", "UAC", "EtG", "EtS"]]
+available_features = [f for f in model_features if f in [
+    "Blood alcohol concentration (mg/dL)", 
+    "Urine alcohol concentration (mg/dL)", 
+    "Ethyl glucuronide (mg/dL)", 
+    "Ethyl sulphate (mg/dL)"
+    ]
+]
 selected_features = st.multiselect(
     "Select measured features:", 
     available_features, 
@@ -97,10 +103,10 @@ if data_input_method == "Manual Entry":
         
         # Set default values based on feature
         feature_defaults = {
-            "EtOH": 50.0,
-            "UAC": 70.0,
-            "EtG": 0.1,
-            "EtS": 0.03
+            "Blood alcohol concentration (mg/dL)": 50.0,
+            "Urine alcohol concentration (mg/dL)": 70.0,
+            "Ethyl glucuronide (mg/dL)": 0.1,
+            "Ethyl sulphate (mg/dL)": 0.03
         }
         default_value = feature_defaults.get(feature, 50.0)
         
@@ -113,7 +119,7 @@ if data_input_method == "Manual Entry":
                 time_val = st.number_input(f"Time {i}_{feature}", 0.0, 100.0, 1.0 + 2.0 * i, 0.1, label_visibility="collapsed", key=time_key)
             with cols[2]:
                 value_key = f"value_{i}_{feature}"
-                value_val = st.number_input(f"Value {i}_{feature}", 0.0, 10000.0, default_value * (3 - i) / 2, 0.01 if feature in ["EtG", "EtS"] else 1.0, label_visibility="collapsed", key=value_key)
+                value_val = st.number_input(f"Value {i}_{feature}", 0.0, 10000.0, default_value * (3 - i) / 2, 0.01 if feature in ["Ethyl glucuronide (mg/dL)", "Ethyl sulphate (mg/dL)"] else 1.0, label_visibility="collapsed", key=value_key)
             with cols[3]:
                 st.write("")
             
@@ -131,7 +137,7 @@ else:  # CSV paste
         st.markdown(f"  - **{feature}**: {unit}")
     st.markdown("- **Time**: hours (h)")
     
-    csv_input = st.text_area("Paste your data here:", height=150, placeholder="Time,EtOH,UAC,EtG,EtS\n0.0,100,0,0,0\n1.0,80,5,2,1\n2.0,60,10,5,3")
+    csv_input = st.text_area("Paste your data here:", height=150, placeholder="Time,BAC,UAC,EtG,EtS\n0.0,100,0,0,0\n1.0,80,5,2,1\n2.0,60,10,5,3")
     
     if csv_input.strip():
         try:
