@@ -220,7 +220,7 @@ def _on_change_n_drinks_08():
     )
     _trigger_simulation_update_08()
 
-n_drinks = st.slider("Number of drinks:", 1, 5, 2, key="n_drinks_08", on_change=_on_change_n_drinks_08)
+n_drinks = st.slider("Number of drinks:", 1, 5, 1, key="n_drinks_08", on_change=_on_change_n_drinks_08)
 
 # Lock all / Unlock all controls for drinks
 la, lb = st.columns(2)
