@@ -14,13 +14,13 @@ We have extended our physiologically based digital twin model to include detaile
 
 Using this extended model, we have constructed interactive use-cases where you can simulate the dynamics of secondary metabolites and evaluate the plausibility of claimed drinking patterns against measured biomarker levels. The use-cases can be reached from the left sidebar, or using the links below.
 
-[The first use-case allows you to simulate drinks and observe the dynamics of secondary alcohol metabolites](Alcohol_secondary_metabolities_dynamics). 
+[The first use-case allows you to simulate drinks and observe the dynamics of secondary alcohol metabolites](alcohol_secondary_metabolites_dynamics). 
 Here you can specify anthropometrics and define a set of drinks and meals to simulate the time course of EtG, EtS, UAC, and other metabolites.
 
-[The second use-case enables you to evaluate the plausibility of claimed alcohol consumption](Plausability_of_behaviour) by comparing model predictions with measured biomarker data. You can see how the model's uncertainty bounds compare with actual measurements, and explore how different drinking scenarios affect the predicted metabolite profiles.
+[The second use-case enables you to evaluate the plausibility of claimed alcohol consumption](plausibility_of_behavior) by comparing model predictions with measured biomarker data. You can see how the model's uncertainty bounds compare with actual measurements, and explore how different drinking scenarios affect the predicted metabolite profiles.
 
-[The third use-case allows you evaluate a reported drinking pattern by comparing it to measured data](Model_fitting). You can input your own measured biomarker levels (or use the defaults in the example) and should then try to find a drinking pattern that gives simulations that agree with the measured data. 
-            
+[The third use-case allows you evaluate a reported drinking pattern by comparing it to measured data](model_fitting). You can input your own measured biomarker levels (or use the defaults in the example) and should then try to find a drinking pattern that gives simulations that agree with the measured data.
+
 
 We hope that this model and these applications can provide insights into secondary metabolite dynamics and support more informed interpretation of biomarker measurements.
 
