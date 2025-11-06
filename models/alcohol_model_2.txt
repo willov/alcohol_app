@@ -224,16 +224,16 @@ urinate             = urinate                       @ 0       // [bool]
 
 ########## FEATURES
 
-UAC = (Urine_Mass_EtOH/Urine_Volume)        [mg/dL]
-EtG = Peripheral_EtG                        [mg/dL]
-EtS = Peripheral_EtS                        [mg/dL]
+Urine alcohol concentration (mg/dL)   = (Urine_Mass_EtOH/Urine_Volume)                          [mg/dL]
+Ethyl glucuronide (mg/dL)             = Peripheral_EtG                                          [mg/dL]
+Ethyl sulphate (mg/dL)                = Peripheral_EtS                                          [mg/dL]
 
-EtOH = Blood_Conc_Peripheral                [mg/dL]
-EtOH_promille = Blood_Conc_Peripheral/105   [‰]
+Blood alcohol concentration (mg/dL)   = Blood_Conc_Peripheral                                   [mg/dL]
+Blood alcohol concentration (‰)       = Blood_Conc_Peripheral/105                               [‰]
 
-Acetate = Plasma_acetate/10.2               						[mM]
-BrAC_g_210L = 0.840*(Blood_Conc_Central/1000) + 0.00367             [g/210L]
-BrAC_mg_L = (10/2.1)*( 0.840*(Blood_Conc_Central/1000) + 0.00367 )  [mg/L]
+Acetate (mM)                          = Plasma_acetate/10.2                                     [mM]
+Breath alcohol concentration (g/210L) = 0.840*(Blood_Conc_Central/1000) + 0.00367               [g/210L]
+Breath alcohol concentration (mg/L)   = (10/2.1)*( 0.840*(Blood_Conc_Central/1000) + 0.00367 )  [mg/L]
 
-Gastric volume = Vol_Stomach*1000           [mL]
-PEth = PEth                                 [ng/mL]
+Gastric volume (mL)                   = Vol_Stomach*1000                                        [mL]
+PEth (ng/mL)                          = PEth                                                    [ng/mL]

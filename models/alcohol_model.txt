@@ -125,11 +125,11 @@ height              = height              @ 1.85    // [m]
 
 ########## FEATURES
 
-Blood alcohol concentration (mg/dL) = Blood_Conc   [mg/dL]
-Blood alcohol concentration (‰) = Blood_Conc/100   [mg/dL]
-Acetate in plasma (mM) = Plasma_acetate/10.2       [mM]
+Blood alcohol concentration (mg/dL)   = Blood_Conc                              [mg/dL]
+Blood alcohol concentration (‰)       = Blood_Conc/100                          [mg/dL]
+Acetate in plasma (mM)                = Plasma_acetate/10.2                     [mM]
 Breath alcohol concentration (g/210L) = (0.840*(Blood_Conc/1000) + 0.00367)*210 [g/210L]
-Breath alcohol concentration (g/L) = ( 0.840*(Blood_Conc/1000) + 0.00367 ) [g/L]
-Gastric volume (mL) = Vol_Stomach*100 [mL]
-PEth (ng/mL) = PEth [ng/mL]
+Breath alcohol concentration (g/L)    = ( 0.840*(Blood_Conc/1000) + 0.00367 )   [g/L]
+Gastric volume (mL)                   = Vol_Stomach*100                         [mL]
+PEth (ng/mL)                          = PEth                                    [ng/mL]
 
