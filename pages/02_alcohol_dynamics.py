@@ -108,7 +108,7 @@ for i in range(n_drinks):
     with col4:
         drink_volumes.append(st.number_input("Vol (L)", 0.0, 24.0, 0.33, 0.1, key=f"drink_volumes{i}"))
     with col5:
-        drink_kcals.append(st.number_input("kcal", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
+        drink_kcals.append(st.number_input("kcal/L", 0.0, 1000.0, 45.0, 1.0, key=f"drink_kcals{i}"))
     start_time += 1
 
 # Setup meals

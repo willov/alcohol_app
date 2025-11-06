@@ -176,7 +176,7 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     
     EtOH_conc = [0] + [c*on for c in drink_concentrations for on in [1, 0]]
     vol_drink_per_time = [0] + [v/t*on if t > 0 else 0 for v, t in zip(drink_volumes, drink_lengths) for on in [1, 0]]
-    kcal_liquid_per_vol = [0] + [k/v*on if v > 0 else 0 for v, k in zip(drink_volumes, drink_kcals) for on in [1, 0]]
+    kcal_liquid_per_vol = [0] + [k*on for k in drink_kcals for on in [1, 0]]
     drink_length = [0] + [t*on for t in drink_lengths for on in [1, 0]]
     t = [t + (l/60)*on for t, l in zip(drink_times, drink_lengths) for on in [0, 1]]
     
