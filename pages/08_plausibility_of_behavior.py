@@ -123,21 +123,6 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
                 ),
                 row=row_idx, col=col_idx
             )
-            
-            # Add median line
-            median = (max_val + min_val) / 2
-            fig.add_trace(
-                go.Scatter(
-                    x=time,
-                    y=median,
-                    mode='lines',
-                    line=dict(color=model_color, width=2),
-                    hoverinfo='x+y',
-                    showlegend=(idx == 0),
-                    name='Median simulation',
-                ),
-                row=row_idx, col=col_idx
-            )
 
     # Plot measured data points
     if showcase_sex in data_scenarios:
