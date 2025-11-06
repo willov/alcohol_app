@@ -36,7 +36,7 @@ st.markdown("# Plausibility of behavior of secondary alcohol metabolites")
 st.write("Plausibility of secondary alcohol metabolites following claimed alcohol consumption")
 st.markdown("""Using the model, we predict the plausibility of the behavior of secondary alcohol metabolites - including ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC). 
 
-Below, a showcase is presented - including a set of sampled data points and a claimed consumption of two alcoholic drinks. The model is used to simulate the expected time course of the secondary metabolites, and compare these to the sampled data points. You can choose between a female and a male.
+Below, a showcase is presented - including a set of sampled data points and a claimed consumption of two alcoholic drinks. The model is used to simulate the expected time course of the secondary metabolites, and compare these to the sampled data points. You can choose between a man or a woman.
 """)
 
 # Load uncertainty and data
@@ -133,8 +133,8 @@ for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels
                     mode='lines',
                     line=dict(color=model_color, width=2),
                     hoverinfo='x+y',
-                    showlegend=False,
-                    name='Median'
+                    showlegend=(idx == 0),
+                    name='Median simulation',
                 ),
                 row=row_idx, col=col_idx
             )
@@ -188,9 +188,9 @@ st.plotly_chart(fig, use_container_width=True, key="showcase_plot")
 
 # Add drink timeline visualization
 if showcase_sex == "Man":
-    st.markdown("**Drink timeline:** Wine at t=0, 0.25, 0.5, 0.75 h | Vodka at t=5 h")
+    st.markdown("**Drink timeline:** Wine at t=[0, 0.25, 0.5, 0.75] h | Vodka at t=[5] h")
 else:
-    st.markdown("**Drink timeline:** Wine at t=0, 0.25, 0.5, 0.75 h | Vodka at t=2 h")
+    st.markdown("**Drink timeline:** Wine at t=[0, 0.25, 0.5, 0.75] h | Vodka at t=[2] h")
 st.divider()
 
 # === INTERACTIVE DEMO SECTION ===
@@ -426,7 +426,8 @@ if st.session_state['sim_results'] is not None:
             demo_color=demo_color,
             feature_map=feature_map,
             drink_starts=drink_times_relative,
-            drink_lengths=drink_lengths
+            drink_lengths=drink_lengths,
+            uncertainty_legend="Target interval"
         )
         
         if fig:

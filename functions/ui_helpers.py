@@ -473,7 +473,7 @@ def enforce_minimum_time(page, what, index, min_gap=None):
             st.session_state[current_key] = min_allowed
 
 
-def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None, data_sem=5.0):
+def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None, data_sem=5.0, uncertainty_legend="Uncertainty"):
     """Create a multi-feature Plotly grid plot (1x1 for single feature, nx2 for multiple).
     
     - sim_results: pandas DataFrame with 'Time' column and feature columns
@@ -546,7 +546,7 @@ def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, 
                             line=dict(color='rgba(255,255,255,0)'),
                             hoverinfo='skip',
                             showlegend=(idx == 0),
-                            name='Uncertainty',
+                            name=uncertainty_legend,
                             legendgroup='uncertainty'
                         ),
                         row=row_idx, col=col_idx
