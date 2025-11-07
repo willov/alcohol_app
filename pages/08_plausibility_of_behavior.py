@@ -8,9 +8,9 @@ from plotly.subplots import make_subplots
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_duration_validate_next,
+    seed_new_items,
     lock_all, enforce_minimum_time, build_stimulus_dict,
-    create_multi_feature_plot
+    create_multi_feature_plot, get_drink_specs
 )
 
 # Setup sund and sidebar
@@ -25,8 +25,8 @@ def load_uncertainty(path="./results/UC_PPL_alcohol_model_individual.json"):
     """Load uncertainty data from PPL results JSON file."""
     if not os.path.exists(path):
         return None
-    with open(path, 'r') as f:
-        data = json.load(f)
+    with open(path, 'r', encoding='utf-8') as f_in:
+        data = json.load(f_in)
     return data
 
 # Start the app
@@ -40,8 +40,8 @@ Below, a showcase is presented - including a set of sampled data points and a cl
 
 # Load uncertainty and data
 uncert_data = load_uncertainty("./results/UC_PPL_alcohol_model_individual.json")
-with open("./data/data_hip_flask_scenarios.json", 'r') as f:
-    data_scenarios = json.load(f)
+with open("./data/data_hip_flask_scenarios.json", 'r', encoding='utf-8') as f_scen:
+    data_scenarios = json.load(f_scen)
 
 # === SHOWCASE SECTION ===
 st.header("Showcase: model uncertainty vs measured data")
@@ -50,13 +50,13 @@ st.markdown("This section displays the model's prediction uncertainty compared t
 # Sex toggle for showcase
 def _on_sex_change():
     # Clear drink-related session state so defaults get recalculated
-    for i in range(5):  # Clear up to 5 drinks
-        key_time = f"drink_time_08_{i}"
-        if key_time in st.session_state:
-            del st.session_state[key_time]
-        lock_key = f"drink_time_locked_08_{i}"
-        if lock_key in st.session_state:
-            del st.session_state[lock_key]
+    for clr_idx in range(5):  # Clear up to 5 drinks
+        clr_key_time = f"drink_time_08_{clr_idx}"
+        if clr_key_time in st.session_state:
+            del st.session_state[clr_key_time]
+        clr_lock_key = f"drink_time_locked_08_{clr_idx}"
+        if clr_lock_key in st.session_state:
+            del st.session_state[clr_lock_key]
     # Clear anthropometric session state so defaults get recalculated
     for key in ["weight_08", "height_08", "age_08"]:
         if key in st.session_state:
@@ -231,90 +231,108 @@ anthropometrics = {
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")
 
-
-# Number of drinks for demo page
-def _on_change_n_drinks_08():
-    seed_new_items(
-        page="08", name="drinks", n=st.session_state.get("n_drinks_08", 1), default_start=15.0, step=1.0,
-        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
-    )
-    _trigger_simulation_update_08()
-
-n_drinks = st.slider("Number of drinks:", 1, 5, 1, key="n_drinks_08", on_change=_on_change_n_drinks_08)
-
-# Lock all / Unlock all controls for drinks
-la, lb = st.columns(2)
-if la.button("Lock all drinks", key="lock_all_drinks_08"):
-    lock_all(page="08", what="drink", n=n_drinks, locked=True)
-if lb.button("Unlock all drinks", key="unlock_all_drinks_08"):
-    lock_all(page="08", what="drink", n=n_drinks, locked=False)
-
-drink_times = []
-drink_lengths = []
-drink_concentrations = []
-drink_volumes = []
-drink_kcals = []
-
-st.divider()
-start_time = 15.0  # Start at 15:00 (3 PM)
-
-def _on_change_drink_time_08(index):
-    # Enforce minimum time constraint with previous drink
-    enforce_minimum_time(page="08", what="drink", index=index, min_gap=None)
-    
-    # Validate that all subsequent drinks still respect their constraints
-    # Only adjust if they conflict, don't propagate arbitrary time changes
-    n_drinks = st.session_state.get("n_drinks_08", 1)
-    for j in range(index + 1, n_drinks):
-        enforce_minimum_time(page="08", what="drink", index=j, min_gap=None)
-    
-    _trigger_simulation_update_08()
-
-def _on_change_drink_length_08(index):
-    # Validate that the next drink's time still respects the constraint
-    on_change_duration_validate_next(page="08", what="drink", index=index, n=st.session_state.get("n_drinks_08", 1), min_gap=None)
-    
-    # After updating the next drink if needed, also validate all subsequent drinks
-    n_drinks = st.session_state.get("n_drinks_08", 1)
-    for j in range(index + 2, n_drinks):
-        enforce_minimum_time(page="08", what="drink", index=j, min_gap=None)
-    
-    _trigger_simulation_update_08()
-
-def _trigger_simulation_update_08():
-    """Trigger simulation update when drink/meal parameters change."""
-    # This will be called after collecting all drink/meal data
-    st.session_state['_should_update_sim_08'] = True
-
-def _refresh_drink_times_08(n_drinks_count):
-    """Refresh drink times with consistent 15-minute spacing."""
-    start_time = 15.0
-    min_gap_hours = 0.25  # 15 minutes in hours
-    
-    # Set all drinks with consistent 15-minute spacing
-    for i in range(n_drinks_count):
-        st.session_state[f"drink_time_08_{i}"] = start_time + i * min_gap_hours
-
-# Initialize drinks using seed_new_items
-seed_new_items(
-    page="08", name="drinks", n=n_drinks, default_start=start_time, step=0.25,
-    seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
+# --- New dynamic drink card interface (replaces table/slider) ---
+st.markdown(
+    """
+    <style>
+    .drink-card {border:1px solid #ddd; border-radius:8px; padding:0.75rem; margin-bottom:0.75rem;}
+    .drink-header {font-weight:600; margin-bottom:0.5rem;}
+    .drink-wine {background:#fff5f0;}
+    .drink-beer {background:#f0f9ff;}
+    .drink-spirit {background:#f9f0ff;}
+    .remove-btn {float:right;}
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
-for i in range(n_drinks):
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_08_{i}", on_change=_on_change_drink_time_08, args=(i,)))
-    lock_key = f"drink_time_locked_08_{i}"
-    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
-    with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length_08, args=(i,)))
-    with col3:
-        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
-    with col4:
-        drink_volumes.append(st.number_input("Vol (L)", 0.0, 2.0, 1.0, 0.1, key=f"drink_volumes{i}"))
-    with col5:
-        drink_kcals.append(st.number_input("kcal/L", 0.0, 600.0, 133.0, 10.0, key=f"drink_kcals{i}"))
+def _trigger_simulation_update_08():
+    st.session_state['_should_update_sim_08'] = True
+
+def _mark_update_08():
+    st.session_state['_should_update_sim_08'] = True
+
+if 'drink_cards_08' not in st.session_state:
+    st.session_state['drink_cards_08'] = []
+
+new_type = st.selectbox("Select a drink to add", ["Wine", "Beer", "Spirit"], key="add_drink_type_08")
+if st.button("Add drink", key="add_drink_btn_08"):
+    specs = get_drink_specs(new_type)
+    cards = st.session_state['drink_cards_08']
+    # Determine default time (0.0 baseline or 15 min after latest existing time)
+    if cards:
+        latest_time = max(c['time'] for c in cards)
+        default_time = latest_time + 0.25
+    else:
+        default_time = 0.0
+    next_id = (max([c['id'] for c in cards]) + 1) if cards else 0
+    cards.append({
+        'id': next_id,
+        'type': new_type,
+        'time': default_time,
+        'length': specs['length'],
+        'abv': specs['conc'],
+        'volume': specs['volume'],
+        'kcal_per_l': specs['kcal']
+    })
+    _trigger_simulation_update_08()
+    st.rerun()
+
+if not st.session_state['drink_cards_08']:
+    st.info("Add a drink using the selector above to begin.")
+else: 
+    st.markdown("#### Drink schedule")
+
+sorted_cards = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
+for order_idx, card in enumerate(sorted_cards):
+    # Cards closed by default; order determined by time
+    with st.expander(f"{card['type']} (Drink {order_idx+1})", expanded=False):
+        # First row: editable drink type
+        type_col, remove_col = st.columns([5,1])
+        selected_type = type_col.selectbox(
+            "Type", ["Wine", "Beer", "Spirit"],
+            index=["Wine", "Beer", "Spirit"].index(card['type']),
+            key=f"drink_card_type_08_{card['id']}"
+        )
+        if selected_type != card['type']:
+            # Apply new defaults on type change
+            new_specs = get_drink_specs(selected_type)
+            card['type'] = selected_type
+            card['length'] = new_specs['length']
+            card['abv'] = new_specs['conc']
+            card['volume'] = new_specs['volume']
+            card['kcal_per_l'] = new_specs['kcal']
+            _trigger_simulation_update_08()
+            st.rerun()
+        if remove_col.button("Remove", key=f"remove_drink_card_08_{card['id']}"):
+            original_cards = st.session_state['drink_cards_08']
+            remove_index = next((i for i, c in enumerate(original_cards) if c['id'] == card['id']), None)
+            if remove_index is not None:
+                original_cards.pop(remove_index)
+            _trigger_simulation_update_08()
+            st.rerun()
+
+        # Second row: numeric fields
+        c1, c2, c3, c4, c5 = st.columns(5)
+        card['time'] = c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_08_{card['id']}", on_change=_mark_update_08)
+        card['length'] = c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_08_{card['id']}", on_change=_mark_update_08)
+        card['abv'] = c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_08_{card['id']}", on_change=_mark_update_08)
+        card['volume'] = c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_08_{card['id']}", on_change=_mark_update_08)
+        card['kcal_per_l'] = c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_08_{card['id']}", on_change=_mark_update_08)
+
+# Bottom utility actions
+if st.session_state['drink_cards_08']:
+    sort_hint = st.button("Sort drinks by time", key="sort_drinks_time_08", help="Reorder cards chronologically if manual edits caused out-of-order display.")
+    if sort_hint:
+        st.session_state['drink_cards_08'] = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
+        st.rerun()
+
+# Build lists required for stimulus
+drink_times = [c['time'] for c in sorted_cards]
+drink_lengths = [c['length'] for c in sorted_cards]
+drink_concentrations = [c['abv'] for c in sorted_cards]
+drink_volumes = [c['volume'] for c in sorted_cards]
+drink_kcals = [c['kcal_per_l'] for c in sorted_cards]
 
 # Setup meals (interactive)
 meal_times = []
@@ -325,6 +343,8 @@ def _on_change_n_meals_08():
         page="08", name="meals", n=st.session_state.get("n_meals_08", 0), default_start=12.0, step=6.0,
         seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="meal"
     )
+
+st.subheader("Specifying the meals")
 
 n_meals = st.slider("Number of (solid) meals:", 0, 15, 1, key="n_meals_08", on_change=_on_change_n_meals_08)
 
@@ -356,14 +376,14 @@ for i in range(n_meals):
     if lock_key not in st.session_state:
         st.session_state[lock_key] = False
 
-for i in range(n_meals):
+for meal_idx in range(n_meals):
     col1, col2 = st.columns(2)
     with col1:
-        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"meal_time_08_{i}", on_change=_on_change_meal_time_08, args=(i,)))
-    lock_key = f"meal_time_locked_08_{i}"
+        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"meal_time_08_{meal_idx}", on_change=_on_change_meal_time_08, args=(meal_idx,)))
+    lock_key = f"meal_time_locked_08_{meal_idx}"
     st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this meal time")
     with col2:
-        meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 10.0, key=f"meal_kcals{i}"))
+        meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 10.0, key=f"meal_kcals{meal_idx}"))
     start_time_meal += 6
 
 if n_meals < 1.0:
@@ -397,13 +417,8 @@ if uncert_data:
 # Run simulation button
 if st.button("Run Simulation", type="primary"):
     with st.spinner("Running simulation..."):
-        # Calculate extra_time needed to reach the uncertainty data duration
-        # The simulation should cover the same time range as the uncertainty data
-        # Uncertainty starts at 0 (representing the first drink), so we need to simulate
-        # from t_start to max_uncert_time_hours
-        first_drink_time = min(drink_times) if drink_times else 15.0
+        first_drink_time = min(drink_times) if drink_times else 0.0
         extra_time = max_uncert_time_hours  # Total time from start
-        
         st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
         st.session_state['demo_anthropometrics'] = anthropometrics.copy()
     st.success("✅ Simulation complete!")
@@ -411,9 +426,8 @@ if st.button("Run Simulation", type="primary"):
 # Auto-update simulation when drink/meal parameters change
 if st.session_state.get('_should_update_sim_08', False):
     with st.spinner("Updating simulation..."):
-        first_drink_time = min(drink_times) if drink_times else 15.0
-        extra_time = max_uncert_time_hours  # Total time from start
-        
+        first_drink_time = min(drink_times) if drink_times else 0.0
+        extra_time = max_uncert_time_hours
         st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
         st.session_state['demo_anthropometrics'] = anthropometrics.copy()
     st.session_state['_should_update_sim_08'] = False
@@ -454,7 +468,7 @@ if st.session_state['sim_results'] is not None:
         sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
         
         # Adjust drink times to start at 0 (relative to first drink)
-        first_drink_time = min(drink_times) if drink_times else 15.0
+        first_drink_time = min(drink_times) if drink_times else 0.0
         drink_times_relative = [t - first_drink_time for t in drink_times]
         
         fig = create_multi_feature_plot(
