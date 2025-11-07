@@ -470,57 +470,60 @@ if st.session_state['sim_results'] is not None:
         )
         
         if fig:
-            st.plotly_chart(fig, use_container_width=True, key=f"plot_08_multi")
-        
-        # === COMPLIANCE CHECK PER FEATURE ===
-        # Use sim_df (adjusted times) for compliance check to match the plot
-        sim_times = sim_df['Time'].values
-        
-        for feature in selected_features:
-            # Get the data key for this feature
-            data_key = display_to_data_key.get(feature, feature)
+            st.plotly_chart(fig, use_container_width=True, key="plot_08_multi")
+
+            # === UNCERTAINTY RANGE ASSESSMENT ===
+            st.markdown("#### Agreement results")
             
-            if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
-                continue
+            # Get simulation times in hours
+            sim_times = sim_df['Time'].values
             
-            if feature not in sim_df.columns:
-                continue
+            # Process each selected feature for uncertainty check
+            all_within_bounds = []
             
-            feat_data = uncert_data[demo_scenario][data_key]
-            uncert_times = np.array(feat_data['Time']) / 60.0
-            uncert_max = np.array(feat_data['Max'])
-            uncert_min = np.array(feat_data['Min'])
-            sim_values = sim_df[feature].values
-            
-            # Check if all points (within simulation range) are within bounds
-            all_within = True
-            checked_count = 0
-            failures = []
-            
-            # Small tolerance for numerical precision issues
-            tolerance = 1e-6
-            
-            for uncert_t, uncert_max_val, uncert_min_val in zip(uncert_times, uncert_max, uncert_min):
-                # Only check points that are within the simulation time range
-                if uncert_t >= sim_times.min() and uncert_t <= sim_times.max():
-                    sim_val = np.interp(uncert_t, sim_times, sim_values)
-                    checked_count += 1
-                    # Add tolerance for floating point comparisons
-                    if not (uncert_min_val - tolerance <= sim_val <= uncert_max_val + tolerance):
-                        all_within = False
-                        failures.append((uncert_t, sim_val, uncert_min_val, uncert_max_val))
-            
-            # Display per-feature indicator (only if we checked at least one point)
-            if checked_count > 0:
-                if all_within:
-                    st.success(f"✅ **{feature}** - within target interval")
+            for feature in selected_features:
+                data_key = display_to_data_key.get(feature, feature)
+                
+                if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
+                    continue
+                
+                if feature not in sim_df.columns:
+                    continue
+                
+                sim_values = sim_df[feature].values
+                feat_data = uncert_data[demo_scenario][data_key]
+                
+                # Get uncertainty bounds
+                uncert_times = np.array(feat_data['Time']) / 60.0
+                uncert_max = np.array(feat_data['Max'])
+                uncert_min = np.array(feat_data['Min'])
+                sim_values = sim_df[feature].values
+                
+                # Interpolate uncertainty bounds at simulation times
+                interpolated_max = np.interp(sim_times, uncert_times, uncert_max)
+                interpolated_min = np.interp(sim_times, uncert_times, uncert_min)
+                
+                # Check if simulation is within bounds for each time point
+                within_bounds = (sim_values >= interpolated_min) & (sim_values <= interpolated_max)
+                
+                # Calculate percentage of points within bounds
+                num_within = np.sum(within_bounds)
+                total_points = len(within_bounds)
+                percentage_within = (num_within / total_points) * 100 if total_points > 0 else 0
+                
+                # Display assessment for this feature
+                if percentage_within >= 95.0:
+                    st.success(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="✅")
                 else:
-                    with st.expander(f"❌ **{feature}** - outside target interval (click for details)"):
-                        st.write(f"Checked {checked_count} points, {len(failures)} failed")
-                        for t, sim_val, min_val, max_val in failures[:3]:  # Show first 3 failures
-                            st.write(f"t={t:.2f}h: sim={sim_val:.4f}, bounds=[{min_val:.4f}, {max_val:.4f}]")
-            else:
-                st.info(f"ℹ️ **{feature}** - no data in simulation range")
+                    st.error(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="❌")
+
+                all_within_bounds.extend(within_bounds.tolist())
+            
+            # Overall success message if all features and timepoints are within bounds
+            if all_within_bounds and len(all_within_bounds) > 0 and all(all_within_bounds):
+                st.success("**All simulated features are within the model uncertainty bounds!**", icon="🎉")
+                
+        
     else:
         st.info("Select at least one feature to plot.")
 else:
