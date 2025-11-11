@@ -40,7 +40,5 @@ This application is a companion to the publication "A Physiologically Based Digi
 
 If you use this application, please cite as:
 
-> A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth.
-> Henrik Podéus, Christian Simonsson, Patrik Nasr, Mattias Ekstedt, Stergios Kechagias, Peter Lundberg, William Lövfors, Gunnar Cedersund.
-> Npj Digital Medicine, 7(1), 1–18. doi: https://doi.org/10.1038/s41746-024-01089-6
+> Podéus H, Simonsson C, Nasr P, Ekstedt M, Kechagias S, Lundberg P, Lövfors W, Cedersund G (2024) A physiologically-based digital twin for alcohol consumption — predicting real-life drinking responses and long-term plasma PEth. npj Digital Medicine 7:112. https://doi.org/10.1038/s41746-024-01089-6
 """)
