@@ -46,7 +46,7 @@ with open("./data/data_hip_flask_scenarios.json", 'r', encoding='utf-8') as f_sc
 
 # === SHOWCASE SECTION ===
 st.header("Showcase: model uncertainty vs measured data")
-st.markdown("This section displays the model's prediction uncertainty compared to actual measured data from controlled experiments.")
+st.markdown("This section displays the model's prediction uncertainty compared to actual measured data from two controlled experiments (for either a man or a woman).")
 
 # Sex toggle for showcase
 def _on_sex_change():
