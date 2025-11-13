@@ -196,7 +196,7 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     
     return stim
 
-def drink_selector_cards(*,page_number, trigger_simulation_update=False, mark_update=False):
+def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_update=False, mark_update=False):
     """Render drink selector cards for adding/editing/removing drinks.
     
     - page_number: string page identifier
@@ -222,7 +222,11 @@ def drink_selector_cards(*,page_number, trigger_simulation_update=False, mark_up
         # Determine default time (0.0 baseline or 15 min after latest existing time)
         if cards:
             latest_time = max(c['time'] for c in cards)
-            default_time = latest_time + 0.25
+            latest_end_time= max(c['time'] + c['length']/60 for c in cards)
+            # Check if latest_time + drink offset collides with existing times, if so move to the next offset multiple
+            default_time= latest_time + drink_offset
+            while default_time<latest_end_time:
+                default_time += drink_offset
         else:
             default_time = 0.0
         next_id = (max([c['id'] for c in cards]) + 1) if cards else 0
