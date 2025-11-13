@@ -24,7 +24,7 @@ The demonstrations have originally been developed as a companion to two academic
 
 This paper presents a mechanistic, physiologically based digital twin that reproduces real-life ethanol kinetics across drink types and individuals. It describes how the blood alcohol concentration is affected by pairing the alcohol with different drinks and meals. It also links short-term ethanol exposure to the formation of long-term PEth, enabling personalized simulations and comparisons against measured PEth levels. The paper was published in npj Digital Medicine in 2024.
 
-Additional information is available in the [*About* section](paper_1) for *Paper 1* in the sidebar.
+Additional information is available in the [*About* section](alcohol-dynamics) for *Paper 1* in the sidebar.
 #### Citation
 
 This application is a companion to the publication "A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth.", 
@@ -42,7 +42,7 @@ This extended model incorporates secondary metabolites (EtG, EtS) and urine alco
 
 **Quick link paper 2:**
 
-- Paper 2: Secondary metabolites and plausibility checks ([open Paper 2 demos](paper_2))
+- Paper 2: Secondary metabolites and plausibility checks ([open Paper 2 demos](secondary-metabolites))
 
 #### Citation
 
