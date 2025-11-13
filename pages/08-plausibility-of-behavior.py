@@ -316,15 +316,6 @@ if uncert_data:
                 max_time = max(feature_data['Time']) / 60.0  # Convert minutes to hours
                 max_uncert_time_hours = max(max_uncert_time_hours, max_time)
 
-# # Run simulation button
-# if st.button("Run Simulation", type="primary", disabled=(not sorted_cards)):
-#     with st.spinner("Running simulation..."):
-#         first_drink_time = min(drink_times) if drink_times else 0.0
-#         extra_time = max_uncert_time_hours  # Total time from start
-#         st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-#         st.session_state['demo_anthropometrics'] = anthropometrics.copy()
-#     st.success("✅ Simulation complete!")
-
 st.divider()
 st.markdown("### Simulation of your drink scenario vs target interval")
 

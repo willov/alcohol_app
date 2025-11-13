@@ -5,7 +5,8 @@ from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items, on_change_duration_validate_next,
     lock_all, enforce_minimum_time, build_stimulus_dict,
-    create_multi_feature_plot, get_anthropometrics_ui
+    create_multi_feature_plot, get_anthropometrics_ui,
+    drink_selector_cards
 )
 
 # Setup sund and sidebar
@@ -32,71 +33,7 @@ anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0,
 # Specifying the drinks
 st.subheader("Specifying the alcoholic drinks")
 
-def _on_change_n_drinks_07():
-    seed_new_items(
-        page="07", name="drinks", n=st.session_state.get("n_drinks_07", 1), default_start=18.0, step=1.0,
-        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
-    )
-
-
-n_drinks = st.slider("Number of drinks:", 1, 15, 1, key="n_drinks_07", on_change=_on_change_n_drinks_07)
-extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
-
-# Lock all / Unlock all controls for drinks
-lock_col_a, lock_col_b = st.columns(2)
-if lock_col_a.button("Lock all drinks", key="lock_all_drinks_07"):
-    lock_all(page="07", what="drink", n=n_drinks, locked=True)
-if lock_col_b.button("Unlock all drinks", key="unlock_all_drinks_07"):
-    lock_all(page="07", what="drink", n=n_drinks, locked=False)
-
-drink_times = []
-drink_lengths = []
-drink_concentrations = []
-drink_volumes = []
-drink_kcals = []
-
-st.divider()
-start_time = 18.0
-
-def _on_change_drink_time_07(index):
-    enforce_minimum_time(page="07", what="drink", index=index, min_gap=None)
-    # Validate that all subsequent drinks still respect their constraints
-    # Only adjust if they conflict, don't propagate arbitrary time changes
-    n_drinks = st.session_state.get("n_drinks_07", 1)
-    for j in range(index + 1, n_drinks):
-        enforce_minimum_time(page="07", what="drink", index=j, min_gap=None)
-
-def _on_change_drink_length_07(index):
-    on_change_duration_validate_next(page="07", what="drink", index=index, n=st.session_state.get("n_drinks_07", 1), min_gap=None)
-    # After updating the next drink if needed, also validate all subsequent drinks
-    n_drinks = st.session_state.get("n_drinks_07", 1)
-    for j in range(index + 2, n_drinks):
-        enforce_minimum_time(page="07", what="drink", index=j, min_gap=None)
-
-# Initialize defaults and locks
-for i in range(n_drinks):
-    key_time = f"drink_time_07_{i}"
-    lock_key = f"drink_time_locked_07_{i}"
-    if key_time not in st.session_state:
-        st.session_state[key_time] = start_time + i * 1.0
-    if lock_key not in st.session_state:
-        st.session_state[lock_key] = False
-
-for i in range(n_drinks):
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_07_{i}", on_change=_on_change_drink_time_07, args=(i,)))
-    lock_key = f"drink_time_locked_07_{i}"
-    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
-    with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length_07, args=(i,)))
-    with col3:
-        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
-    with col4:
-        drink_volumes.append(st.number_input("Vol (L)", 0.0, 2.0, 0.33, 0.1, key=f"drink_volumes{i}"))
-    with col5:
-        drink_kcals.append(st.number_input("kcal/L", 0.0, 600.0, 45.0, 10.0, key=f"drink_kcals{i}"))
-    start_time += 1
+drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="07", trigger_simulation_update=True, mark_update=True)
 
 # Setup meals
 st.subheader(f"Specifying the meals")
@@ -163,16 +100,33 @@ stim = build_stimulus_dict(
     drink_volumes, drink_kcals, meal_times, meal_kcals
 )
 
+extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
+
+
+# Auto-update simulation when drink/meal parameters change
+if st.session_state.get('_should_update_sim_07', False):
+    with st.spinner("Updating simulation..."):
+        first_drink_time = min(drink_times) if drink_times else 0.0
+        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+    st.session_state['_should_update_sim_07'] = False
+    st.rerun()
+
 # Plotting the drinks
 
-sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
 
-st.subheader("Plotting the time course given the alcoholic drinks specified")
-selected_features = st.multiselect("Features of the model to plot", model_features, default=[model_features[0]] if model_features else [], key="plot_features_07")
 
-if selected_features:
-    fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
-    if fig:
-        st.plotly_chart(fig, use_container_width=True, key=f"plot_07_multi")
-else:
-    st.info("👆 Select at least one feature to plot.")
+if drink_times and st.session_state['sim_results'] is not None:
+    sim_results = st.session_state['sim_results']
+
+    st.subheader("Plotting the time course given the alcoholic drinks specified")
+    selected_features = st.multiselect("Features of the model to plot", model_features, default=model_features[0:2] if model_features else [], key="plot_features_07")
+
+    if selected_features:
+        fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True, key=f"plot_07_multi")
+    else:
+        st.warning("Select at least one feature to plot.")
+elif not drink_times:
+    st.warning("Please specify at least one alcoholic drink to simulate.")
