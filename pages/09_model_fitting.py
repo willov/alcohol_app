@@ -5,9 +5,9 @@ import pandas as pd
 from sidebar_config import setup_sidebar
 from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
-    seed_new_items, on_change_duration_validate_next, 
-    lock_all, enforce_minimum_time, build_stimulus_dict,
-    create_multi_feature_plot, get_anthropometrics_ui
+    build_stimulus_dict,
+    create_multi_feature_plot, get_anthropometrics_ui,
+    drink_selector_cards
 )
 
 # Setup sund and sidebar
@@ -208,7 +208,7 @@ else:  # CSV paste
 # Display parsed data
 if any(data_points.values()):
     total_points = sum(len(points) for points in data_points.values())
-    st.markdown(f"#### {total_points} Data Points Loaded")
+    st.markdown(f"#### Total number of data points loaded: {total_points}")
     
     for feature in selected_features:
         if data_points[feature]:
@@ -224,93 +224,26 @@ else:
 st.divider()
 
 # === ANTHROPOMETRICS SECTION ===
-st.header("Subject Anthropometrics")
+st.header("Subject anthropometrics")
 
 anthropometrics = get_anthropometrics_ui(defaults={"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30})
 
 st.divider()
 
 # === DRINKING PATTERN SECTION ===
-st.header("Design Your Drinking Pattern")
+st.header("Design your drinking pattern")
 
-def _on_change_n_drinks_09():
-    seed_new_items(
-        page="09", name="drinks", n=st.session_state.get("n_drinks_09", 1), default_start=0.0, step=1.0,
-        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="drink"
-    )
+drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="09", trigger_simulation_update=True, mark_update=True)
 
-n_drinks = st.slider("Number of drinks:", 1, 10, 2, key="n_drinks_09", on_change=_on_change_n_drinks_09)
-
-# Lock all / Unlock all controls for drinks
-lock_col_a, lock_col_b = st.columns(2)
-if lock_col_a.button("Lock all drinks", key="lock_all_drinks_09"):
-    lock_all(page="09", what="drink", n=n_drinks, locked=True)
-if lock_col_b.button("Unlock all drinks", key="unlock_all_drinks_09"):
-    lock_all(page="09", what="drink", n=n_drinks, locked=False)
-
-drink_times = []
-drink_lengths = []
-drink_concentrations = []
-drink_volumes = []
-drink_kcals = []
-
-st.divider()
-start_time = 0.0
-
-def _on_change_drink_time_09(index):
-    enforce_minimum_time(page="09", what="drink", index=index, min_gap=None)
-    # Validate that all subsequent drinks still respect their constraints
-    # Only adjust if they conflict, don't propagate arbitrary time changes
-    n_drinks = st.session_state.get("n_drinks_09", 1)
-    for j in range(index + 1, n_drinks):
-        enforce_minimum_time(page="09", what="drink", index=j, min_gap=None)
-    _trigger_simulation_update_09()
-
-def _on_change_drink_length_09(index):
-    on_change_duration_validate_next(page="09", what="drink", index=index, n=st.session_state.get("n_drinks_09", 1), min_gap=None)
-    # After updating the next drink if needed, also validate all subsequent drinks
-    n_drinks = st.session_state.get("n_drinks_09", 1)
-    for j in range(index + 2, n_drinks):
-        enforce_minimum_time(page="09", what="drink", index=j, min_gap=None)
-    _trigger_simulation_update_09()
-
-def _trigger_simulation_update_09():
-    """Trigger simulation update when drink parameters change."""
-    st.session_state['_should_update_sim_09'] = True
-
-# Initialize defaults and locks
-for i in range(n_drinks):
-    key_time = f"drink_time_09_{i}"
-    lock_key = f"drink_time_locked_09_{i}"
-    if key_time not in st.session_state:
-        st.session_state[key_time] = start_time + i * 2.0
-    if lock_key not in st.session_state:
-        st.session_state[lock_key] = False
-
-for i in range(n_drinks):
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        drink_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"drink_time_09_{i}", on_change=_on_change_drink_time_09, args=(i,)))
-    lock_key = f"drink_time_locked_09_{i}"
-    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this drink time")
-    with col2:
-        drink_lengths.append(st.number_input("Length (min)", 0.0, 240.0, 20.0, 1.0, key=f"drink_length{i}", on_change=_on_change_drink_length_09, args=(i,)))
-    with col3:
-        drink_concentrations.append(st.number_input("ABV (%)", 0.0, 100.0, 5.0, 0.1, key=f"drink_concentrations{i}"))
-    with col4:
-        drink_volumes.append(st.number_input("Vol (L)", 0.0, 2.0, 0.33, 0.1, key=f"drink_volumes{i}"))
-    with col5:
-        drink_kcals.append(st.number_input("kcal/L", 0.0, 600.0, 45.0, 10.0, key=f"drink_kcals{i}"))
-    start_time += 2
 
 st.divider()
 
 # === SIMULATION SECTION ===
-st.header("Run Simulation and Analyze")
+st.header("Simulation settings")
 
 extra_time = st.number_input("Time to simulate after last drink (h):", 0.0, 100.0, 5.0, 0.5, key="extra_time_09")
 
-data_sem = st.number_input("Data SEM (%):", 0.1, 100.0, 5.0, 0.1, key="data_sem_09", help="Standard Error of the Mean tolerance for data points (±%)")
+data_sem = st.number_input("Data uncertainty (%):", 0.1, 100.0, 5.0, 0.1, key="data_sem_09", help="Standard Error of the Mean tolerance for data points (±%)")
 
 # Validate drink arrays before building stimulus dict
 if len(drink_times) > 0 and len(drink_lengths) > 0:
@@ -328,31 +261,30 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
             drink_volumes, drink_kcals, meal_times, meal_kcals
         )
         
-        # Run simulation button
-    if st.button("Run Simulation", type="primary", key="run_sim_09"):
-            if not any(data_points.values()):
-                st.error("Please enter at least one data point before running simulation.")
-            else:
-                with st.spinner("Running simulation..."):
-                    try:
-                        sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
-                        st.session_state['sim_results_09'] = sim_results
-                        st.session_state['data_points_09'] = data_points
-                        st.session_state['selected_features_09'] = selected_features
-                        st.session_state['anthropometrics_09'] = anthropometrics.copy()
-                        st.success("Simulation complete!")
-                    except Exception as e:
-                        st.error(f"Simulation failed: {str(e)}")
+    # Run simulation button
+    if not any(data_points.values()):
+        st.error("Please enter at least one data point before running simulation.")
+    else:
+        with st.spinner("Running simulation..."):
+            try:
+                sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
+                st.session_state['sim_results_09'] = sim_results
+                st.session_state['data_points_09'] = data_points
+                st.session_state['selected_features_09'] = selected_features
+                st.session_state['anthropometrics_09'] = anthropometrics.copy()
+            except Exception as e:
+                st.error(f"Simulation failed: {str(e)}")
 else:
-    st.warning("Please configure at least one drink before running simulation.")
+    st.warning("Please configure at least one drink for the simulation to be run.")
 
 # Display results if simulation has been run
-if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] is not None:
+if drink_times:
     sim_results = st.session_state['sim_results_09']
     data_points_dict = st.session_state['data_points_09']
     selected_features = st.session_state['selected_features_09']
     
-    st.subheader("Comparison: Simulation vs Experimental Data")
+    st.divider()
+    st.header("Comparison: simulation vs experimental Data")
     
     # Check if there's any data to compare
     if not any(data_points_dict.values()):
@@ -390,7 +322,7 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
             sim_values = sim_results[feature].values
             
             # === TOLERANCE CHECK ===
-            st.markdown(f"#### ✅ Fit Analysis for {feature}")
+            st.markdown(f"#### Fit Analysis for {feature}")
             
             # Extract data times and values
             data_times = [float(dp['time']) for dp in data_points_plot]
@@ -445,7 +377,6 @@ if 'sim_results_09' in st.session_state and st.session_state['sim_results_09'] i
                 )
             
             all_fits.extend(fits)
-            st.divider()
         
         # Overall success message if all features and points are within tolerance
         if all_fits and len(all_fits) > 0 and all(all_fits):
