@@ -35,6 +35,8 @@ st.subheader("Specifying the alcoholic drinks")
 
 drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="07", trigger_simulation_update=True, mark_update=True)
 
+st.divider()
+
 # Setup meals
 st.subheader(f"Specifying the meals")
 
@@ -57,8 +59,6 @@ if lockm_a.button("Lock all meals", key="lock_all_meals_07"):
     lock_all(page="07", what="meal", n=n_meals, locked=True)
 if lockm_b.button("Unlock all meals", key="unlock_all_meals_07"):
     lock_all(page="07", what="meal", n=n_meals, locked=False)
-
-st.divider()
 
 def _on_change_meal_time_07(index):
     # Enforce that this meal's time is not before the previous meal's time + 10 minutes
@@ -100,33 +100,36 @@ stim = build_stimulus_dict(
     drink_volumes, drink_kcals, meal_times, meal_kcals
 )
 
-extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
-
-
-# Auto-update simulation when drink/meal parameters change
-if st.session_state.get('_should_update_sim_07', False):
-    with st.spinner("Updating simulation..."):
-        first_drink_time = min(drink_times) if drink_times else 0.0
-        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
-    st.session_state['_should_update_sim_07'] = False
-    st.rerun()
+st.divider()
 
 # Plotting the drinks
 
-
-
-if drink_times and st.session_state['sim_results'] is not None:
-    sim_results = st.session_state['sim_results']
+if drink_times:
 
     st.subheader("Plotting the time course given the alcoholic drinks specified")
-    selected_features = st.multiselect("Features of the model to plot", model_features, default=model_features[0:2] if model_features else [], key="plot_features_07")
+    extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
 
-    if selected_features:
-        fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
-        if fig:
-            st.plotly_chart(fig, use_container_width=True, key=f"plot_07_multi")
-    else:
-        st.warning("Select at least one feature to plot.")
+    # Auto-update simulation when drink/meal parameters change
+    if st.session_state.get('_should_update_sim_07', False):
+        with st.spinner("Updating simulation..."):
+            first_drink_time = min(drink_times) if drink_times else 0.0
+            st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+            st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+        st.session_state['_should_update_sim_07'] = False
+        st.rerun()
+
+    if st.session_state['sim_results'] is not None:
+        sim_results = st.session_state['sim_results']
+
+        selected_features = st.multiselect("Features of the model to plot", model_features, default=model_features[0:3] if model_features else [], key="plot_features_07")
+
+        if selected_features:
+            fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True, key=f"plot_07_multi")
+        else:
+            st.warning("Select at least one feature to plot.")
+    else: 
+        st.error("Simulation failed. Please check the inputs and try again.")
 elif not drink_times:
     st.warning("Please specify at least one alcoholic drink to simulate.")
