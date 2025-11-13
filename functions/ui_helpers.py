@@ -196,10 +196,10 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     
     return stim
 
-def drink_selector_cards(page_number="08", trigger_simulation_update=False, mark_update=False):
+def drink_selector_cards(*,page_number, trigger_simulation_update=False, mark_update=False):
     """Render drink selector cards for adding/editing/removing drinks.
     
-    - page_number: string page identifier (default: "08")
+    - page_number: string page identifier
     - trigger_simulation_update: if True, defines a function to trigger simulation update
     - mark_update: if True, defines a function to mark that an update is needed
     
@@ -243,8 +243,8 @@ def drink_selector_cards(page_number="08", trigger_simulation_update=False, mark
     else: 
         st.markdown("#### Drink schedule")
 
-    sorted_cards = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
-    open_id_key = 'open_expander_card_id_08'
+    sorted_cards = sorted(st.session_state[f'drink_cards_{page_number}'], key=lambda c: c['time'])
+    open_id_key = f'open_expander_card_id_{page_number}'
     for order_idx, card in enumerate(sorted_cards):
         # Determine icon per drink type
         if card["type"] == "Spirit":
@@ -263,7 +263,7 @@ def drink_selector_cards(page_number="08", trigger_simulation_update=False, mark
             selected_type = type_col.selectbox(
                 "Type", ["Wine", "Beer", "Spirit"],
                 index=["Wine", "Beer", "Spirit"].index(card['type']),
-                key=f"drink_card_type_08_{card['id']}"
+                key=f"drink_card_type_{page_number}_{card['id']}"
             )
             if selected_type != card['type']:
                 # Apply new defaults on type change
@@ -301,10 +301,10 @@ def drink_selector_cards(page_number="08", trigger_simulation_update=False, mark
             card['volume'] = c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_{page_number}_{card['id']}", on_change=_mark_update)
             card['kcal_per_l'] = c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_{page_number}_{card['id']}", on_change=_mark_update)
     # Bottom utility actions
-    if st.session_state['drink_cards_08']:
-        sort_hint = st.button("Sort drinks by time", key="sort_drinks_time_08", help="Reorder cards chronologically if manual edits caused out-of-order display.")
+    if st.session_state[f'drink_cards_{page_number}']:
+        sort_hint = st.button("Sort drinks by time", key=f"sort_drinks_time_{page_number}", help="Reorder cards chronologically if manual edits caused out-of-order display.")
         if sort_hint:
-            st.session_state['drink_cards_08'] = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
+            st.session_state[f'drink_cards_{page_number}'] = sorted(st.session_state[f'drink_cards_{page_number}'], key=lambda c: c['time'])
             st.rerun()
 
     # Build lists required for stimulus
