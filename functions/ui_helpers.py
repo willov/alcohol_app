@@ -196,6 +196,126 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     
     return stim
 
+def drink_selector_cards(page_number="08", trigger_simulation_update=False, mark_update=False):
+    """Render drink selector cards for adding/editing/removing drinks.
+    
+    - page_number: string page identifier (default: "08")
+    - trigger_simulation_update: if True, defines a function to trigger simulation update
+    - mark_update: if True, defines a function to mark that an update is needed
+    
+    Returns: None (renders UI)
+    """
+    def _trigger_simulation_update():
+        if trigger_simulation_update:
+            st.session_state[f'_should_update_sim_{page_number}'] = True
+
+    def _mark_update():
+        if mark_update:
+            st.session_state[f'_should_update_sim_{page_number}'] = True
+    if f'drink_cards_{page_number}' not in st.session_state:
+        st.session_state[f'drink_cards_{page_number}'] = []
+
+    new_type = st.selectbox("Select a drink to add", ["Wine", "Beer", "Spirit"], key=f"add_drink_type_{page_number}")
+    if st.button("Add drink", key=f"add_drink_btn_{page_number}"):
+        specs = get_drink_specs(new_type)
+        cards = st.session_state[f'drink_cards_{page_number}']
+        # Determine default time (0.0 baseline or 15 min after latest existing time)
+        if cards:
+            latest_time = max(c['time'] for c in cards)
+            default_time = latest_time + 0.25
+        else:
+            default_time = 0.0
+        next_id = (max([c['id'] for c in cards]) + 1) if cards else 0
+        cards.append({
+            'id': next_id,
+            'type': new_type,
+            'time': default_time,
+            'length': specs['length'],
+            'abv': specs['conc'],
+            'volume': specs['volume'],
+            'kcal_per_l': specs['kcal']
+        })
+        _trigger_simulation_update()
+        st.rerun()
+
+    if not st.session_state[f'drink_cards_{page_number}']:
+        st.info("Add a drink using the selector above to begin.")
+    else: 
+        st.markdown("#### Drink schedule")
+
+    sorted_cards = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
+    open_id_key = 'open_expander_card_id_08'
+    for order_idx, card in enumerate(sorted_cards):
+        # Determine icon per drink type
+        if card["type"] == "Spirit":
+            icon = "🟦"
+        elif card["type"] == "Beer":
+            icon = "🟧"
+        elif card["type"] == "Wine":
+            icon = "🟥"
+        else:
+            icon = "🍹"
+        # Preserve expansion state: expand if this card id matches stored session key
+        expanded_flag = st.session_state.get(open_id_key) == card['id']
+        with st.expander(f"{icon} {card['type']} (Drink {order_idx+1})", expanded=expanded_flag):
+            # First row: editable drink type
+            type_col, remove_col = st.columns([5,1])
+            selected_type = type_col.selectbox(
+                "Type", ["Wine", "Beer", "Spirit"],
+                index=["Wine", "Beer", "Spirit"].index(card['type']),
+                key=f"drink_card_type_08_{card['id']}"
+            )
+            if selected_type != card['type']:
+                # Apply new defaults on type change
+                new_specs = get_drink_specs(selected_type)
+                card['type'] = selected_type
+                card['length'] = new_specs['length']
+                card['abv'] = new_specs['conc']
+                card['volume'] = new_specs['volume']
+                card['kcal_per_l'] = new_specs['kcal']
+                # Reset the widget values so UI reflects new defaults immediately
+                st.session_state[f"drink_card_length_{page_number}_{card['id']}"] = float(new_specs['length'])
+                st.session_state[f"drink_card_abv_{page_number}_{card['id']}"] = float(new_specs['conc'])
+                st.session_state[f"drink_card_volume_{page_number}_{card['id']}"] = float(new_specs['volume'])
+                st.session_state[f"drink_card_kcal_{page_number}_{card['id']}"] = float(new_specs['kcal'])
+                # Mark this card to remain open after rerun
+                st.session_state[open_id_key] = card['id']
+                _trigger_simulation_update()
+                st.rerun()
+            if remove_col.button("Remove", key=f"remove_drink_card_{page_number}_{card['id']}"):
+                original_cards = st.session_state[f'drink_cards_{page_number}']
+                remove_index = next((i for i, c in enumerate(original_cards) if c['id'] == card['id']), None)
+                if remove_index is not None:
+                    original_cards.pop(remove_index)
+                # Clear stored open expander if this card was open
+                if st.session_state.get(open_id_key) == card['id']:
+                    del st.session_state[open_id_key]
+                _trigger_simulation_update()
+                st.rerun()
+
+            # Second row: numeric fields
+            c1, c2, c3, c4, c5 = st.columns(5)
+            card['time'] = c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_{page_number}_{card['id']}", on_change=_mark_update)
+            card['length'] = c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_{page_number}_{card['id']}", on_change=_mark_update)
+            card['abv'] = c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_{page_number}_{card['id']}", on_change=_mark_update)
+            card['volume'] = c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_{page_number}_{card['id']}", on_change=_mark_update)
+            card['kcal_per_l'] = c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_{page_number}_{card['id']}", on_change=_mark_update)
+    # Bottom utility actions
+    if st.session_state['drink_cards_08']:
+        sort_hint = st.button("Sort drinks by time", key="sort_drinks_time_08", help="Reorder cards chronologically if manual edits caused out-of-order display.")
+        if sort_hint:
+            st.session_state['drink_cards_08'] = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
+            st.rerun()
+
+    # Build lists required for stimulus
+    drink_times = [c['time'] for c in sorted_cards]
+    drink_lengths = [c['length'] for c in sorted_cards]
+    drink_concentrations = [c['abv'] for c in sorted_cards]
+    drink_volumes = [c['volume'] for c in sorted_cards]
+    drink_kcals = [c['kcal_per_l'] for c in sorted_cards]
+
+    return drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals
+
 
 def get_anthropometrics_ui(defaults=None):
     """Render anthropometric UI inputs and return values.

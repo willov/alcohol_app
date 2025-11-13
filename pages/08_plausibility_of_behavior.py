@@ -10,7 +10,8 @@ from functions.ui_helpers import (
     setup_sund_package, setup_model, simulate,
     seed_new_items,
     lock_all, enforce_minimum_time, build_stimulus_dict,
-    create_multi_feature_plot, get_drink_specs
+    create_multi_feature_plot, get_drink_specs,
+    drink_selector_cards
 )
 
 # Setup sund and sidebar
@@ -229,117 +230,10 @@ anthropometrics = {
 }
 
 # Specifying the drinks
+st.divider()    
 st.subheader("Specifying the alcoholic drinks")
 
-
-def _trigger_simulation_update_08():
-    st.session_state['_should_update_sim_08'] = True
-
-def _mark_update_08():
-    st.session_state['_should_update_sim_08'] = True
-
-if 'drink_cards_08' not in st.session_state:
-    st.session_state['drink_cards_08'] = []
-
-new_type = st.selectbox("Select a drink to add", ["Wine", "Beer", "Spirit"], key="add_drink_type_08")
-if st.button("Add drink", key="add_drink_btn_08"):
-    specs = get_drink_specs(new_type)
-    cards = st.session_state['drink_cards_08']
-    # Determine default time (0.0 baseline or 15 min after latest existing time)
-    if cards:
-        latest_time = max(c['time'] for c in cards)
-        default_time = latest_time + 0.25
-    else:
-        default_time = 0.0
-    next_id = (max([c['id'] for c in cards]) + 1) if cards else 0
-    cards.append({
-        'id': next_id,
-        'type': new_type,
-        'time': default_time,
-        'length': specs['length'],
-        'abv': specs['conc'],
-        'volume': specs['volume'],
-        'kcal_per_l': specs['kcal']
-    })
-    _trigger_simulation_update_08()
-    st.rerun()
-
-if not st.session_state['drink_cards_08']:
-    st.info("Add a drink using the selector above to begin.")
-else: 
-    st.markdown("#### Drink schedule")
-
-sorted_cards = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
-open_id_key = 'open_expander_card_id_08'
-for order_idx, card in enumerate(sorted_cards):
-    # Determine icon per drink type
-    if card["type"] == "Spirit":
-        icon = "🟦"
-    elif card["type"] == "Beer":
-        icon = "🟧"
-    elif card["type"] == "Wine":
-        icon = "🟥"
-    else:
-        icon = "🍹"
-    # Preserve expansion state: expand if this card id matches stored session key
-    expanded_flag = st.session_state.get(open_id_key) == card['id']
-    with st.expander(f"{icon} {card['type']} (Drink {order_idx+1})", expanded=expanded_flag):
-        # First row: editable drink type
-        type_col, remove_col = st.columns([5,1])
-        selected_type = type_col.selectbox(
-            "Type", ["Wine", "Beer", "Spirit"],
-            index=["Wine", "Beer", "Spirit"].index(card['type']),
-            key=f"drink_card_type_08_{card['id']}"
-        )
-        if selected_type != card['type']:
-            # Apply new defaults on type change
-            new_specs = get_drink_specs(selected_type)
-            card['type'] = selected_type
-            card['length'] = new_specs['length']
-            card['abv'] = new_specs['conc']
-            card['volume'] = new_specs['volume']
-            card['kcal_per_l'] = new_specs['kcal']
-            # Reset the widget values so UI reflects new defaults immediately
-            st.session_state[f"drink_card_length_08_{card['id']}"] = float(new_specs['length'])
-            st.session_state[f"drink_card_abv_08_{card['id']}"] = float(new_specs['conc'])
-            st.session_state[f"drink_card_volume_08_{card['id']}"] = float(new_specs['volume'])
-            st.session_state[f"drink_card_kcal_08_{card['id']}"] = float(new_specs['kcal'])
-            # Mark this card to remain open after rerun
-            st.session_state[open_id_key] = card['id']
-            _trigger_simulation_update_08()
-            st.rerun()
-        if remove_col.button("Remove", key=f"remove_drink_card_08_{card['id']}"):
-            original_cards = st.session_state['drink_cards_08']
-            remove_index = next((i for i, c in enumerate(original_cards) if c['id'] == card['id']), None)
-            if remove_index is not None:
-                original_cards.pop(remove_index)
-            # Clear stored open expander if this card was open
-            if st.session_state.get(open_id_key) == card['id']:
-                del st.session_state[open_id_key]
-            _trigger_simulation_update_08()
-            st.rerun()
-
-        # Second row: numeric fields
-        c1, c2, c3, c4, c5 = st.columns(5)
-        card['time'] = c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_08_{card['id']}", on_change=_mark_update_08)
-        card['length'] = c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_08_{card['id']}", on_change=_mark_update_08)
-        card['abv'] = c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_08_{card['id']}", on_change=_mark_update_08)
-        card['volume'] = c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_08_{card['id']}", on_change=_mark_update_08)
-        card['kcal_per_l'] = c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_08_{card['id']}", on_change=_mark_update_08)
-
-# Bottom utility actions
-if st.session_state['drink_cards_08']:
-    sort_hint = st.button("Sort drinks by time", key="sort_drinks_time_08", help="Reorder cards chronologically if manual edits caused out-of-order display.")
-    if sort_hint:
-        st.session_state['drink_cards_08'] = sorted(st.session_state['drink_cards_08'], key=lambda c: c['time'])
-        st.rerun()
-
-# Build lists required for stimulus
-drink_times = [c['time'] for c in sorted_cards]
-drink_lengths = [c['length'] for c in sorted_cards]
-drink_concentrations = [c['abv'] for c in sorted_cards]
-drink_volumes = [c['volume'] for c in sorted_cards]
-drink_kcals = [c['kcal_per_l'] for c in sorted_cards]
+drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="08", trigger_simulation_update=True, mark_update=True)
 
 # Setup meals (interactive)
 meal_times = []
@@ -350,6 +244,8 @@ def _on_change_n_meals_08():
         page="08", name="meals", n=st.session_state.get("n_meals_08", 0), default_start=12.0, step=6.0,
         seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="meal"
     )
+
+st.divider()
 
 st.subheader("Specifying the meals")
 
@@ -362,7 +258,6 @@ if lm_a.button("Lock all meals", key="lock_all_meals_08"):
 if lm_b.button("Unlock all meals", key="unlock_all_meals_08"):
     lock_all(page="08", what="meal", n=n_meals, locked=False)
 
-st.divider()
 start_time_meal = 12.0
 
 def _on_change_meal_time_08(index):
@@ -548,7 +443,7 @@ if st.session_state['sim_results'] is not None:
     else:
         st.info("Select at least one feature to plot.")
 else:
-    if not sorted_cards:
+    if not drink_times:
         st.warning("Add at least one drink to enable simulation.")
     else:
         st.info("Click the button above to run the simulation with your chosen parameters.")
