@@ -198,8 +198,8 @@ else:
 st.divider()
 
 # === INTERACTIVE DEMO SECTION ===
-st.header("Interactive demo: simulate your own scenario")
-st.markdown("Specify your own drinking pattern and anthropometric characteristics to simulate alcohol kinetics. The simulation will run for the same duration as the model uncertainty data (~24 hours), allowing full comparison of your scenario against the uncertainty bounds (no measured data shown in this section). This is a tool intended for exploration and educational purposes, where you are intended to investigate how different claimed drinking patterns and anthropometrics affect the predicted alcohol kinetics.")
+st.header("Interactive demo: simulate a custom scenario")
+st.markdown("Specify a custom drinking pattern and anthropometric characteristics to simulate alcohol kinetics. The simulation will run for the same duration as the model uncertainty data (~24 hours), allowing full comparison of your scenario against the uncertainty bounds (no measured data shown in this section). This is a tool intended for exploration and educational purposes, where you are intended to investigate how different claimed drinking patterns and anthropometrics affect the predicted alcohol kinetics.")
 
 # Anthropometrics            
 st.subheader("Anthropometrics")
@@ -421,14 +421,17 @@ if uncert_data:
                 max_time = max(feature_data['Time']) / 60.0  # Convert minutes to hours
                 max_uncert_time_hours = max(max_uncert_time_hours, max_time)
 
-# Run simulation button
-if st.button("Run Simulation", type="primary"):
-    with st.spinner("Running simulation..."):
-        first_drink_time = min(drink_times) if drink_times else 0.0
-        extra_time = max_uncert_time_hours  # Total time from start
-        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
-    st.success("✅ Simulation complete!")
+# # Run simulation button
+# if st.button("Run Simulation", type="primary", disabled=(not sorted_cards)):
+#     with st.spinner("Running simulation..."):
+#         first_drink_time = min(drink_times) if drink_times else 0.0
+#         extra_time = max_uncert_time_hours  # Total time from start
+#         st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+#         st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+#     st.success("✅ Simulation complete!")
+
+st.divider()
+st.markdown("### Simulation of your drink scenario vs target interval")
 
 # Auto-update simulation when drink/meal parameters change
 if st.session_state.get('_should_update_sim_08', False):
@@ -454,10 +457,7 @@ if st.session_state['sim_results'] is not None:
     ]
     available_features = [f for f in allowed_features if f in model_features]
     
-    # Select features to plot
-    selected_features = st.multiselect("Select features to visualize:", available_features, default=available_features, key="plot_features_08")
-    
-    if selected_features:
+    if available_features:
         # Determine which scenario to use for uncertainty based on sex
         demo_scenario = "Man" if demo_anthropometrics["sex"] == 1.0 else "Woman"
         demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
@@ -480,7 +480,7 @@ if st.session_state['sim_results'] is not None:
         
         fig = create_multi_feature_plot(
             sim_df, 
-            selected_features,
+            available_features,
             uncert_data=uncert_data,
             demo_scenario=demo_scenario,
             demo_color=demo_color,
@@ -494,7 +494,7 @@ if st.session_state['sim_results'] is not None:
             st.plotly_chart(fig, use_container_width=True, key="plot_08_multi")
 
             # === UNCERTAINTY RANGE ASSESSMENT ===
-            st.markdown("#### Agreement results")
+            st.markdown("#### Agreement with target interval assessment")
             
             # Get simulation times in hours
             sim_times = sim_df['Time'].values
@@ -502,7 +502,7 @@ if st.session_state['sim_results'] is not None:
             # Process each selected feature for uncertainty check
             all_within_bounds = []
             
-            for feature in selected_features:
+            for feature in available_features:
                 data_key = display_to_data_key.get(feature, feature)
                 
                 if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
@@ -548,4 +548,7 @@ if st.session_state['sim_results'] is not None:
     else:
         st.info("Select at least one feature to plot.")
 else:
-    st.info("Click the button above to run the simulation with your chosen parameters.")
+    if not sorted_cards:
+        st.warning("Add at least one drink to enable simulation.")
+    else:
+        st.info("Click the button above to run the simulation with your chosen parameters.")
