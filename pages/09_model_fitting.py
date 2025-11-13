@@ -277,8 +277,17 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
 else:
     st.warning("Please configure at least one drink for the simulation to be run.")
 
+# Auto-update simulation when drink/meal parameters change
+if st.session_state.get('_should_update_sim_09', False):
+    with st.spinner("Updating simulation..."):
+        first_drink_time = min(drink_times) if drink_times else 0.0
+        st.session_state['sim_results_09'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+        st.session_state['anthropometrics_09'] = anthropometrics.copy()
+    st.session_state['_should_update_sim_09'] = False
+    st.rerun()
+
 # Display results if simulation has been run
-if drink_times:
+if drink_times and 'sim_results_09' in st.session_state:
     sim_results = st.session_state['sim_results_09']
     data_points_dict = st.session_state['data_points_09']
     selected_features = st.session_state['selected_features_09']
