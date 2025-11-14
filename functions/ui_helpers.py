@@ -247,14 +247,18 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
                 current_card = sorted_cards[i]
                 prev_card = sorted_cards[i - 1]
                 prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
-                
-                # Only adjust if there's an overlap
-                while current_card['time'] < prev_end_time:
-                    # When correcting overlap from duration change, use default offset
-                    current_card['time'] += default_offset
-                    adjustments_made = True
+
+                if current_card['time'] < prev_end_time:
+                    # Round up current time to nearest default offset multiple
+                    current_card['time'] = ((current_card['time'] + default_offset - 1e-9) // default_offset) * default_offset
                     
-                st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
+                    # Only adjust if there's an overlap
+                    while current_card['time'] <= prev_end_time:
+                        # When correcting overlap from duration change, use default offset
+                        current_card['time'] += default_offset
+                        adjustments_made = True
+                        
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
             
             # If no adjustments were made, we're done
             if not adjustments_made:
@@ -292,17 +296,25 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
                 prev_card = sorted_cards[i - 1]
                 prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
                 
-                # Only adjust if there's an overlap
-                while current_card['time'] <= prev_end_time:
-                    # When correcting overlap from duration change, use default offset
-                    current_card['time'] += default_offset
-                    adjustments_made = True
+                if current_card['time'] < prev_end_time:
 
-                st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
+                    # Round up current time to nearest default offset multiple
+                    current_card['time'] = ((current_card['time'] + default_offset - 1e-9) // default_offset) * default_offset
+
+                    # Only adjust if there's an overlap
+                    while current_card['time'] <= prev_end_time:
+                        # When correcting overlap from duration change, use default offset
+                        current_card['time'] += default_offset
+                        adjustments_made = True
+
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
             
             # If no adjustments were made, we're done
             if not adjustments_made:
                 break
+
+        if adjustments_made:
+            st.toast("Some drink times were adjusted to prevent overlaps.")
 
     if f'drink_cards_{page_number}' not in st.session_state:
         st.session_state[f'drink_cards_{page_number}'] = []
