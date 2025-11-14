@@ -10,6 +10,15 @@ Fixed -  for any bug fixes.
 Security -  in case of vulnerabilities. 
 -->
 
+## [2.0.0] - 2025-11-14
+
+### Added
+- Added the demonstrations for the second usecase: secondary metabolites and use in forensic applications
+
+
+### Changed
+- Restructure the app to allow for multiple usecases
+
 ## [1.1.0] - 2025-10-27
 
 ### Fixed

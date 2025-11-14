@@ -1,0 +1,864 @@
+import streamlit as st
+import json
+import os
+import sys
+from pathlib import Path
+import subprocess
+import numpy as np
+import pandas as pd
+
+
+def setup_sund_package():
+    """Install and setup sund package in custom location."""
+    Path("./custom_package").mkdir(parents=True, exist_ok=True)
+    if "sund" not in os.listdir('./custom_package'):
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--target=./custom_package", "sund<3.0"])
+    
+    if './custom_package' not in sys.path:
+        sys.path.append('./custom_package')
+    
+    import sund
+    return sund
+
+
+def setup_model(model_name, model_file_path="./models/", param_file_path=None):
+    """Setup a sund model with parameters.
+    
+    - model_name: name of the model (without .txt extension)
+    - model_file_path: directory containing model files (default: ./models/)
+    - param_file_path: path to parameter JSON file. If None, uses default based on model_name
+    
+    Returns: (model_instance, feature_names_list)
+    """
+    import sund
+    
+    sund.install_model(f"{model_file_path}{model_name}.txt")
+    model = sund.load_model(model_name)
+    
+    # Determine parameter file path
+    if param_file_path is None:
+        # Use default parameter file naming convention
+        if model_name == "alcohol_model":
+            param_file_path = "./results/alcohol_model (186.99).json"
+        elif model_name == "alcohol_model_2":
+            param_file_path = "./results/alcohol_model_2 (642.74446).json"
+        else:
+            param_file_path = f"./results/{model_name}.json"
+    
+    # Load parameters
+    if os.path.exists(param_file_path):
+        with open(param_file_path, 'r') as f:
+            param_in = json.load(f)
+            params = param_in['x']
+        model.parameter_values = params
+    
+    features = list(model.feature_names)
+    return model, features
+
+
+def simulate(model, anthropometrics, stim, extra_time=10):
+    """Run a sund simulation with given stimuli and anthropometrics.
+    
+    - model: sund model instance
+    - anthropometrics: dict of anthropometric values
+    - stim: dict with keys like "EtOH_conc", "kcal_solid" etc, each with "t" and "f" keys
+    - extra_time: hours to simulate after last event
+    
+    Returns: DataFrame with Time column and all simulated features
+    """
+    import sund
+    
+    act = sund.Activity(time_unit='h')
+    
+    for key, val in stim.items():
+        act.add_output(name=key, type='piecewise_constant', t=val["t"], f=val["f"])
+    
+    # Only pass anthropometric parameters that the model expects and have valid values
+    valid_params = {'sex', 'weight', 'height', 'age'}
+    for key, val in anthropometrics.items():
+        if key in valid_params and val is not None:
+            try:
+                # Ensure val is numeric
+                numeric_val = float(val) if not isinstance(val, (int, float)) else val
+                act.add_output(name=key, type='constant', f=numeric_val)
+            except (ValueError, TypeError):
+                # Skip invalid values
+                pass
+    
+    sim = sund.Simulation(models=model, activities=act, time_unit='h')
+    
+    t_start = min(stim["EtOH_conc"]["t"] + stim["kcal_solid"]["t"]) - 0.25
+    
+    sim.simulate(time=np.linspace(t_start, max(stim["EtOH_conc"]["t"]) + extra_time, 10000))
+    
+    sim_results = pd.DataFrame(sim.feature_values, columns=sim.feature_names)
+    sim_results.insert(0, 'Time', sim.time_vector)
+    
+    t_start_drink = min(stim["EtOH_conc"]["t"]) 
+    sim_drink_results = sim_results[(sim_results['Time'] >= t_start_drink)]
+    
+    return sim_drink_results
+
+
+def flatten(nested_list):
+    """Flatten a list of lists into a single list."""
+    return [item for sublist in nested_list for item in sublist]
+
+
+def get_drink_specs(drink_type):
+    """Get specifications for a drink type.
+    
+    Returns: dict with keys: conc, volume, kcal, length
+    """
+    specs = {
+        "Beer": {
+            "conc": 5.1,           # % alcohol
+            "volume": 0.33,        # liters
+            "kcal": 129.827,       # per liter
+            "length": 20           # minutes to drink
+        },
+        "Wine": {
+            "conc": 12.0,
+            "volume": 0.15,
+            "kcal": 133.2526,
+            "length": 20
+        },
+        "Spirit": {
+            "conc": 40.0,
+            "volume": 0.04,
+            "kcal": 10.0,
+            "length": 2
+        }
+    }
+    
+    if drink_type not in specs:
+        raise ValueError(f"Unknown drink type: {drink_type}. Must be one of {list(specs.keys())}")
+    
+    return specs[drink_type]
+
+
+def init_anthropometrics(defaults=None):
+    """Initialize anthropometric session state variables.
+    
+    - defaults: optional dict with keys 'sex', 'weight', 'height', 'age'
+    
+    Returns: dict with anthropometric values
+    """
+    if defaults is None:
+        defaults = {"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30}
+    
+    keys = ["sex", "weight", "height", "age"]
+    
+    # Initialize session state only for keys that have non-None defaults
+    for key in keys:
+        default_val = defaults.get(key, None)
+        if key not in st.session_state:
+            st.session_state[key] = default_val
+        # If this key's default is not None but session state is None, update it
+        elif default_val is not None and st.session_state[key] is None:
+            st.session_state[key] = default_val
+    
+    return {key: st.session_state[key] for key in keys}
+
+
+def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations, 
+                       drink_volumes, drink_kcals, meal_times, meal_kcals):
+    """Build the stimulus dictionary for simulation.
+    
+    Constructs piecewise constant stimuli for alcohol, volume, kcal intake, and meals.
+    
+    Note: drink_lengths are in minutes and converted to hours for time vector (t). 
+    The other inputs expect change per minute.
+    
+    Returns: dict with keys EtOH_conc, vol_drink_per_time, kcal_liquid_per_vol, 
+             drink_length, kcal_solid
+    """
+    
+    EtOH_conc = [0] + [c*on for c in drink_concentrations for on in [1, 0]]
+    vol_drink_per_time = [0] + [v/t*on if t > 0 else 0 for v, t in zip(drink_volumes, drink_lengths) for on in [1, 0]]
+    kcal_liquid_per_vol = [0] + [k*on for k in drink_kcals for on in [1, 0]]
+    drink_length = [0] + [t*on for t in drink_lengths for on in [1, 0]]
+    t = [t + (l/60)*on for t, l in zip(drink_times, drink_lengths) for on in [0, 1]]
+    
+    # BUGFIX: Add a small epsilon to any time points that are exact integers or half-integers
+    # This prevents CVODE solver issues when stimulus times align with whole hours or half-hours
+    epsilon = 1e-6
+    for i in range(len(t)):
+        # Check if close to an integer or half-integer (within floating point precision)
+        remainder = t[i] % 0.5
+        if abs(remainder) < 1e-9 or abs(remainder - 0.5) < 1e-9:
+            t[i] = t[i] + epsilon
+    
+    stim = {
+        "EtOH_conc": {"t": t, "f": EtOH_conc},
+        "vol_drink_per_time": {"t": t, "f": vol_drink_per_time},
+        "kcal_liquid_per_vol": {"t": t, "f": kcal_liquid_per_vol},
+        "drink_length": {"t": t, "f": drink_length},
+        "kcal_solid": {"t": meal_times, "f": meal_kcals},
+    }
+    
+    return stim
+
+def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_update=False, mark_update=False):
+    """Render drink selector cards for adding/editing/removing drinks.
+    
+    - page_number: string page identifier
+    - drink_offset: default time offset between drinks when they are found overlapping in hours  (default 0.25 = 15 minutes)
+    - trigger_simulation_update: if True, defines a function to trigger simulation update
+    - mark_update: if True, defines a function to mark that an update is needed
+    
+    Returns: None (renders UI)
+    """
+    def _trigger_simulation_update():
+        if trigger_simulation_update:
+            st.session_state[f'_should_update_sim_{page_number}'] = True
+
+    def _mark_update():
+        if mark_update:
+            st.session_state[f'_should_update_sim_{page_number}'] = True
+    
+    def _on_change_drink_time(card_id):
+        """Validate that drinks don't overlap by checking all drinks in chronological order.
+        
+        When user manually changes time to a valid position, allow it.
+        When user creates an overlap, auto-correct with default offset and propagate adjustments.
+        """
+        cards = st.session_state[f'drink_cards_{page_number}']
+        
+        # First update the card that triggered this callback with its new widget value
+        changed_card = next((c for c in cards if c['id'] == card_id), None)
+        if changed_card:
+            widget_key = f"drink_card_time_{page_number}_{card_id}"
+            if widget_key in st.session_state:
+                changed_card['time'] = st.session_state[widget_key]
+        
+        # Sort all cards by time (now includes the updated value)
+        sorted_cards = sorted(cards, key=lambda c: c['time'])
+        
+        # Default offset between drinks (15 minutes = 0.25 hours)
+        default_offset = drink_offset
+        
+        # Go through each drink in order and ensure it starts after the previous one ends
+        # Keep iterating until no more adjustments are needed (to handle cascading overlaps)
+        max_iterations = len(sorted_cards)  # Prevent infinite loops
+        for iteration in range(max_iterations):
+            adjustments_made = False
+            for i in range(1, len(sorted_cards)):
+                current_card = sorted_cards[i]
+                prev_card = sorted_cards[i - 1]
+                prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
+
+                if current_card['time'] < prev_end_time:
+                    # Round up current time to nearest default offset multiple
+                    current_card['time'] = ((current_card['time'] + default_offset - 1e-9) // default_offset) * default_offset
+                    
+                    # Only adjust if there's an overlap
+                    while current_card['time'] <= prev_end_time:
+                        # When correcting overlap from duration change, use default offset
+                        current_card['time'] += default_offset
+                        adjustments_made = True
+                        
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
+            
+            # If no adjustments were made, we're done
+            if not adjustments_made:
+                break
+
+
+    def _on_change_drink_length(card_id):
+        """Validate that drinks don't overlap when duration changes.
+        
+        When duration changes, only adjust if there's overlap (use default offset for correction).
+        Propagate adjustments to handle cascading overlaps.
+        """
+        cards = st.session_state[f'drink_cards_{page_number}']
+        
+        # First update the card that triggered this callback with its new widget value
+        changed_card = next((c for c in cards if c['id'] == card_id), None)
+        if changed_card:
+            widget_key = f"drink_card_length_{page_number}_{card_id}"
+            if widget_key in st.session_state:
+                changed_card['length'] = st.session_state[widget_key]
+        
+        # Sort all cards by time (using updated length values)
+        sorted_cards = sorted(cards, key=lambda c: c['time'])
+        
+        # Default offset between drinks (15 minutes = 0.25 hours)
+        default_offset = drink_offset
+        
+        # Go through each drink in order and ensure it doesn't overlap with previous
+        # Keep iterating until no more adjustments are needed (to handle cascading overlaps)
+        max_iterations = len(sorted_cards)  # Prevent infinite loops
+        for iteration in range(max_iterations):
+            adjustments_made = False
+            for i in range(1, len(sorted_cards)):
+                current_card = sorted_cards[i]
+                prev_card = sorted_cards[i - 1]
+                prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
+                
+                if current_card['time'] < prev_end_time:
+
+                    # Round up current time to nearest default offset multiple
+                    current_card['time'] = ((current_card['time'] + default_offset - 1e-9) // default_offset) * default_offset
+
+                    # Only adjust if there's an overlap
+                    while current_card['time'] <= prev_end_time:
+                        # When correcting overlap from duration change, use default offset
+                        current_card['time'] += default_offset
+                        adjustments_made = True
+
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
+            
+            # If no adjustments were made, we're done
+            if not adjustments_made:
+                break
+
+        if adjustments_made:
+            st.toast("Some drink times were adjusted to prevent overlaps.")
+
+    if f'drink_cards_{page_number}' not in st.session_state:
+        st.session_state[f'drink_cards_{page_number}'] = []
+
+    new_type = st.selectbox("Select a drink to add", ["Wine", "Beer", "Spirit"], key=f"add_drink_type_{page_number}")
+    if st.button("Add drink", key=f"add_drink_btn_{page_number}"):
+        specs = get_drink_specs(new_type)
+        cards = st.session_state[f'drink_cards_{page_number}']
+        # Determine default time (0.0 baseline or 15 min after latest existing time)
+        if cards:
+            latest_time = max(c['time'] for c in cards)
+            latest_end_time= max(c['time'] + c['length']/60 for c in cards)
+            # Check if latest_time + drink offset collides with existing times, if so move to the next offset multiple
+            default_time= latest_time + drink_offset
+            while default_time<latest_end_time:
+                default_time += drink_offset
+        else:
+            default_time = 0.0
+        next_id = (max([c['id'] for c in cards]) + 1) if cards else 0
+        cards.append({
+            'id': next_id,
+            'type': new_type,
+            'time': default_time,
+            'length': specs['length'],
+            'abv': specs['conc'],
+            'volume': specs['volume'],
+            'kcal_per_l': specs['kcal']
+        })
+        _trigger_simulation_update()
+        st.rerun()
+
+    if not st.session_state[f'drink_cards_{page_number}']:
+        st.info("Add a drink using the selector above to begin.")
+    else: 
+        st.markdown("#### Drink schedule")
+
+    sorted_cards = sorted(st.session_state[f'drink_cards_{page_number}'], key=lambda c: c['time'])
+    open_id_key = f'open_expander_card_id_{page_number}'
+    for order_idx, card in enumerate(sorted_cards):
+        # Determine icon per drink type
+        if card["type"] == "Spirit":
+            icon = "🟦"
+        elif card["type"] == "Beer":
+            icon = "🟧"
+        elif card["type"] == "Wine":
+            icon = "🟥"
+        else:
+            icon = "🍹"
+        # Preserve expansion state: expand if this card id matches stored session key
+        expanded_flag = st.session_state.get(open_id_key) == card['id']
+        with st.expander(f"{icon} {card['type']} (Drink {order_idx+1})", expanded=expanded_flag):
+            # First row: editable drink type
+            type_col, remove_col = st.columns([5,1])
+            selected_type = type_col.selectbox(
+                "Type", ["Wine", "Beer", "Spirit"],
+                index=["Wine", "Beer", "Spirit"].index(card['type']),
+                key=f"drink_card_type_{page_number}_{card['id']}"
+            )
+            if selected_type != card['type']:
+                # Apply new defaults on type change
+                new_specs = get_drink_specs(selected_type)
+                card['type'] = selected_type
+                card['length'] = new_specs['length']
+                card['abv'] = new_specs['conc']
+                card['volume'] = new_specs['volume']
+                card['kcal_per_l'] = new_specs['kcal']
+                # Reset the widget values so UI reflects new defaults immediately
+                st.session_state[f"drink_card_length_{page_number}_{card['id']}"] = float(new_specs['length'])
+                st.session_state[f"drink_card_abv_{page_number}_{card['id']}"] = float(new_specs['conc'])
+                st.session_state[f"drink_card_volume_{page_number}_{card['id']}"] = float(new_specs['volume'])
+                st.session_state[f"drink_card_kcal_{page_number}_{card['id']}"] = float(new_specs['kcal'])
+                # Mark this card to remain open after rerun
+                st.session_state[open_id_key] = card['id']
+                _trigger_simulation_update()
+                st.rerun()
+            if remove_col.button("Remove", key=f"remove_drink_card_{page_number}_{card['id']}"):
+                original_cards = st.session_state[f'drink_cards_{page_number}']
+                remove_index = next((i for i, c in enumerate(original_cards) if c['id'] == card['id']), None)
+                if remove_index is not None:
+                    original_cards.pop(remove_index)
+                # Clear stored open expander if this card was open
+                if st.session_state.get(open_id_key) == card['id']:
+                    del st.session_state[open_id_key]
+                _trigger_simulation_update()
+                st.rerun()
+
+            # Second row: numeric fields
+            def _on_time_change_wrapper(cid=card['id']):
+                _on_change_drink_time(cid)
+                _mark_update()
+            
+            def _on_length_change_wrapper(cid=card['id']):
+                _on_change_drink_length(cid)
+                _mark_update()
+            
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_{page_number}_{card['id']}", on_change=_on_time_change_wrapper)
+            c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_{page_number}_{card['id']}", on_change=_on_length_change_wrapper)
+            c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_{page_number}_{card['id']}", on_change=_mark_update)
+            c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_{page_number}_{card['id']}", on_change=_mark_update)
+            c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_{page_number}_{card['id']}", on_change=_mark_update)
+            
+            # Read updated values from session state (in case callbacks modified them)
+            card['time'] = st.session_state[f"drink_card_time_{page_number}_{card['id']}"]
+            card['length'] = st.session_state[f"drink_card_length_{page_number}_{card['id']}"]
+            card['abv'] = st.session_state[f"drink_card_abv_{page_number}_{card['id']}"]
+            card['volume'] = st.session_state[f"drink_card_volume_{page_number}_{card['id']}"]
+            card['kcal_per_l'] = st.session_state[f"drink_card_kcal_{page_number}_{card['id']}"]
+    
+    # Build lists required for stimulus
+    drink_times = [c['time'] for c in sorted_cards]
+    drink_lengths = [c['length'] for c in sorted_cards]
+    drink_concentrations = [c['abv'] for c in sorted_cards]
+    drink_volumes = [c['volume'] for c in sorted_cards]
+    drink_kcals = [c['kcal_per_l'] for c in sorted_cards]
+
+    return drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals
+
+
+def get_anthropometrics_ui(defaults=None):
+    """Render anthropometric UI inputs and return values.
+    
+    Displays Streamlit UI inputs for sex, weight, height, and age.
+    Uses session state for persistence across reruns.
+    
+    - defaults: optional dict with keys 'sex', 'weight', 'height', 'age'
+    
+    Returns: dict with anthropometric values (sex as numeric: 1.0 for male, 0.0 for female)
+    """
+    if defaults is None:
+        defaults = {"sex": "Man", "weight": 70.0, "height": 1.72, "age": 30}
+    
+    anthropometrics = init_anthropometrics(defaults=defaults)
+    
+    anthropometrics["sex"] = st.selectbox(
+        "Sex:", 
+        ["Man", "Woman"], 
+        index=["Man", "Woman"].index(anthropometrics['sex']) if isinstance(anthropometrics['sex'], str) else (0 if anthropometrics['sex'] == 1.0 else 1),
+        key="sex"
+    )
+    anthropometrics["weight"] = st.number_input(
+        "Weight (kg):", 
+        min_value=0.0, 
+        max_value=200.0, 
+        value=float(st.session_state.get("weight", 70.0) or 70.0), 
+        step=1.0, 
+        key="weight"
+    )
+    anthropometrics["height"] = st.number_input(
+        "Height (m):", 
+        min_value=0.0, 
+        max_value=2.5, 
+        value=float(st.session_state.get("height", 1.72) or 1.72), 
+        key="height"
+    )
+    if defaults.get("age") is not None:
+        anthropometrics["age"] = st.number_input(
+            "Age (years):", 
+            min_value=0, 
+            max_value=120, 
+            value=int(st.session_state.get("age", 30) or 30),
+            key="age"
+        )
+    
+    # Convert sex string to numeric (1.0 for male, 0.0 for female)
+    anthropometrics["sex"] = float(anthropometrics["sex"].lower() in ["male", "man", "men", "boy", "1", "chap", "guy"])
+    
+    return anthropometrics
+
+
+def simulate_week(model, anthropometrics, drink_type, drink_grams_total, n_weeks=1):
+    """Simulate weekly drinking pattern and return results.
+    
+    - model: sund model instance (should be 'alcohol_model')
+    - anthropometrics: dict with 'sex', 'weight', 'height' keys
+    - drink_type: "Beer", "Wine", or "Spirit"
+    - drink_grams_total: total ethanol in grams for the week
+    - n_weeks: number of weeks to simulate (default: 1)
+    
+    Returns: DataFrame with simulation results
+    """
+    specs = get_drink_specs(drink_type)
+    drink_conc = specs["conc"]
+    drink_volume = specs["volume"]
+    drink_kcal_per_liter = specs["kcal"]
+    drink_kcal = drink_kcal_per_liter * drink_volume
+    drink_length = specs["length"]
+
+    single_drink_grams = drink_conc * drink_volume * 0.7891 * 10
+
+    # Generate drinking schedule across days
+    drink_times = [[], [], [], [], [], [], []]
+    drink_lengths = [[], [], [], [], [], [], []]
+    drink_concentrations = [[], [], [], [], [], [], []]
+    drink_volumes = [[], [], [], [], [], [], []]
+    drink_kcals = [[], [], [], [], [], [], []]
+
+    start_time = 18.0
+    drinks_total = drink_grams_total / single_drink_grams
+    drinks_per_day = drinks_total / 7
+
+    for drink in range(0, int(np.ceil(drinks_per_day)) + 1):
+        for day in range(5, -2, -1):
+            if drinks_total > 0:
+                drink_times[day].append(start_time)
+                drink_lengths[day].append(drink_length)
+                drink_concentrations[day].append(drink_conc)
+                drink_volumes[day].append(min(1, drinks_total) * drink_volume)
+                drink_kcals[day].append(drink_kcal)
+                drinks_total -= 1
+        start_time += 1
+
+    # Flatten and repeat for n_weeks
+    drink_times = [t + 24*day for day, times in enumerate(drink_times) for t in times]
+    drink_lengths = flatten(drink_lengths)
+    drink_concentrations = flatten(drink_concentrations)
+    drink_volumes = flatten(drink_volumes)
+    drink_kcals = flatten(drink_kcals)
+
+    drink_times = [t + 24*7*week for week in range(0, n_weeks) for t in drink_times]
+    drink_lengths = drink_lengths * n_weeks
+    drink_concentrations = drink_concentrations * n_weeks
+    drink_volumes = drink_volumes * n_weeks
+    drink_kcals = drink_kcals * n_weeks
+
+    # Generate meal schedule
+    daily_kcal = 2500 if anthropometrics["sex"] == 1 else 2000
+
+    meal_times = [t + 24*d + 24*7*w for w in range(n_weeks) for d in range(0, 7) for t in [7, 12, 18]]
+    meal_lengths = 30.0 / 60
+    meal_times = [t + meal_lengths*on for t in meal_times for on in [0, 1]]
+
+    meal_kcals = [0.2*daily_kcal, 0.4*daily_kcal, 0.4*daily_kcal] * 7 * n_weeks
+    meal_kcals = [k*on for k in meal_kcals for on in [1, 0]]
+
+    # Build stimulus using helper
+    stim = build_stimulus_dict(
+        drink_times, drink_lengths, drink_concentrations, 
+        drink_volumes, drink_kcals, meal_times, [0] + meal_kcals
+    )
+
+    sim_results = simulate(model, anthropometrics, stim, extra_time=12)
+    return sim_results
+
+
+def prune_session_keys(page, prefix, indices, keys):
+    """Remove session_state keys for given indices and key name patterns.
+
+    - page: page id string (e.g., '02')
+    - prefix: base prefix like 'drink' or 'meal'
+    - indices: iterable of integer indices to prune
+    - keys: list of suffix patterns (e.g., ["time", "time_locked", "length0"]) - will be formatted
+    """
+    for i in indices:
+        for k in keys:
+            full = f"{k.format(prefix=prefix, page=page, i=i)}"
+            if full in st.session_state:
+                del st.session_state[full]
+
+
+def seed_new_items(page, name, n, default_start, step, seed_key_template, lock_key_template, key_prefix=None):
+    """Seed newly added items for a list field.
+
+    - seed_key_template e.g. 'drink_time_{page}_{i}' (pass with braces for format)
+    - lock_key_template e.g. 'drink_time_locked_{page}_{i}'
+    Returns nothing; writes to st.session_state.
+    """
+    # Determine a stable prefix to use in generated keys (allow plural or singular names)
+    prefix = key_prefix if key_prefix is not None else (name[:-1] if isinstance(name, str) and name.endswith('s') else name)
+
+    # Determine which prev counter key is present or should be used. Support variants for backwards compatibility.
+    candidates = [f"_prev_{name}_{page}", f"_prev_n_{name}_{page}", f"_prev_{prefix}_{page}"]
+    prev_key = next((c for c in candidates if c in st.session_state), candidates[0])
+    prev = st.session_state.get(prev_key, 0)
+    if n < prev:
+        # prune removed indices
+        prune_session_keys(page, prefix, range(n, prev), [seed_key_template, lock_key_template, f"{prefix}_length{{i}}", f"{prefix}_concentrations{{i}}", f"{prefix}_volumes{{i}}", f"{prefix}_kcals{{i}}"])
+        st.session_state[prev_key] = n
+        return
+    if n == prev:
+        return
+    last_index = prev - 1
+    if last_index >= 0:
+        last_time = st.session_state.get(seed_key_template.format(prefix=prefix, page=page, i=last_index))
+    else:
+        last_time = None
+    if last_time is None:
+        last_time = default_start + (last_index if last_index >= 0 else 0) * step
+    for i in range(prev, n):
+        st.session_state.setdefault(seed_key_template.format(prefix=prefix, page=page, i=i), last_time + (i - last_index) * step if last_index >= 0 else default_start + i * step)
+        st.session_state.setdefault(lock_key_template.format(prefix=prefix, page=page, i=i), False)
+    st.session_state[prev_key] = n
+
+
+def lock_all(page, what, n, locked=True):
+    """Set all lock flags for items on a page."""
+    for i in range(n):
+        st.session_state[f"{what}_time_locked_{page}_{i}"] = locked
+
+
+def on_change_duration_validate_next(page, what, index, n, min_gap=None):
+    """Validate the next item's time when an item's duration changes.
+    
+    When an item's duration changes, the next item's start time must still respect
+    the minimum gap from the previous item's end time.
+    
+    - page: page id string (e.g., '02')
+    - what: 'drink' or 'meal'
+    - index: int index that changed
+    - n: total count
+    - min_gap: if provided, use this as the minimum gap; otherwise use duration of current item
+    """
+    # Only validate the next item if it exists
+    next_index = index + 1
+    if next_index >= n:
+        return
+    
+    # Check if the next item is locked - if so, don't change it
+    next_lock_key = f"{what}_time_locked_{page}_{next_index}"
+    if st.session_state.get(next_lock_key, False):
+        return
+    
+    # Get current item's end time
+    current_key = f"{what}_time_{page}_{index}"
+    current_time = st.session_state.get(current_key, 0.0)
+    
+    # Compute the gap to use
+    if min_gap is None:
+        # Get the duration of the current item
+        current_length_key = f"{what}_length{index}"
+        current_length_minutes = st.session_state.get(current_length_key, 0.0)
+        gap = current_length_minutes / 60.0  # Convert minutes to hours
+    else:
+        gap = min_gap
+    
+    min_allowed = current_time + gap
+    
+    # Check next item's time
+    next_key = f"{what}_time_{page}_{next_index}"
+    next_time = st.session_state.get(next_key, 0.0)
+    
+    if next_time < min_allowed:
+        st.session_state[next_key] = min_allowed
+
+
+def enforce_minimum_time(page, what, index, min_gap=None):
+    """Enforce that an item's time is not before the previous item's time + min_gap.
+    
+    If the current time is less than the previous item's time + min_gap,
+    reset it to the previous time + min_gap (or min_gap if index 0).
+    
+    - page: page id string (e.g., '02')
+    - what: 'drink' or 'meal'
+    - index: int index of the item to check
+    - min_gap: minimum gap from previous item. If None, uses duration of previous item.
+               For drinks, this is drink_length (in minutes), for meals it defaults to 0.0.
+    """
+    current_key = f"{what}_time_{page}_{index}"
+    current_time = st.session_state.get(current_key, 0.0)
+    
+    if index == 0:
+        # First item must be >= 0
+        if current_time < 0.0:
+            st.session_state[current_key] = 0.0
+    else:
+        # Subsequent items must be >= previous item's time + min_gap
+        prev_key = f"{what}_time_{page}_{index - 1}"
+        prev_time = st.session_state.get(prev_key, 0.0)
+        
+        # Compute min_gap from previous item's duration if not provided
+        if min_gap is None:
+            # Get the duration of the previous item in hours
+            prev_length_key = f"{what}_length{index - 1}"
+            prev_length_minutes = st.session_state.get(prev_length_key, 0.0)
+            min_gap = prev_length_minutes / 60.0  # Convert minutes to hours
+        
+        min_allowed = prev_time + min_gap
+        if current_time < min_allowed:
+            st.session_state[current_key] = min_allowed
+
+
+def create_multi_feature_plot(sim_results, selected_features, uncert_data=None, demo_scenario=None, demo_color=None, feature_map=None, drink_starts=None, drink_lengths=None, data_points=None, data_sem=5.0, uncertainty_legend="Uncertainty"):
+    """Create a multi-feature Plotly grid plot (1x1 for single feature, nx2 for multiple).
+    
+    - sim_results: pandas DataFrame with 'Time' column and feature columns
+    - selected_features: list of feature names to plot
+    - uncert_data: optional dict with uncertainty data (for page 08)
+    - demo_scenario: optional scenario key for uncertainty lookup
+    - demo_color: optional color for uncertainty band (hex string)
+    - feature_map: optional dict to map feature names to uncertainty keys
+    - drink_starts: optional list of drink start times (hours)
+    - drink_lengths: optional list of drink durations (minutes)
+    - data_points: optional dict with feature names as keys and lists of {"time": t, "value": v} as values
+    - data_sem: optional SEM (Standard Error of the Mean) as percentage (default: 5.0)
+    
+    Returns: plotly Figure object
+    """
+    try:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+    except Exception:
+        raise
+    
+    if not selected_features:
+        return None
+    
+    # Calculate grid dimensions
+    n_features = len(selected_features)
+    if n_features == 1:
+        n_rows, n_cols = 1, 1
+    else:
+        n_rows = (n_features + 1) // 2  # Ceiling division
+        n_cols = 2
+    
+    # Create subplots
+    fig = make_subplots(
+        rows=n_rows, cols=n_cols,
+        subplot_titles=selected_features,
+        horizontal_spacing=0.15,
+        vertical_spacing=0.15
+    )
+    
+    for idx, feature in enumerate(selected_features):
+        if n_cols == 1:
+            row_idx = idx + 1
+            col_idx = 1
+        else:
+            row_idx = (idx // 2) + 1
+            col_idx = (idx % 2) + 1
+        
+        if feature in sim_results.columns:
+            # Add uncertainty band if provided
+            if uncert_data and demo_scenario and demo_color and feature_map:
+                mapped_feature = feature_map.get(feature, feature)
+                if demo_scenario in uncert_data and mapped_feature in uncert_data[demo_scenario]:
+                    feat_data = uncert_data[demo_scenario][mapped_feature]
+                    uncert_time = np.array(feat_data['Time']) / 60.0  # Convert minutes to hours
+                    uncert_max = np.array(feat_data['Max'])
+                    uncert_min = np.array(feat_data['Min'])
+                    
+                    # Convert hex color to rgba
+                    rgb = tuple(int(demo_color[i:i+2], 16) for i in (1, 3, 5))
+                    rgba_str = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.25)'
+                    
+                    # Add uncertainty band
+                    fig.add_trace(
+                        go.Scatter(
+                            x=list(uncert_time) + list(reversed(uncert_time)),
+                            y=list(uncert_max) + list(reversed(uncert_min)),
+                            fill='toself',
+                            fillcolor=rgba_str,
+                            line=dict(color='rgba(255,255,255,0)'),
+                            hoverinfo='skip',
+                            showlegend=(idx == 0),
+                            name=uncertainty_legend,
+                            legendgroup='uncertainty'
+                        ),
+                        row=row_idx, col=col_idx
+                    )
+            
+            # Add simulation line
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_results['Time'],
+                    y=sim_results[feature],
+                    mode='lines',
+                    name='Simulation',
+                    line=dict(width=2, color='blue'),
+                    showlegend=(idx == 0),
+                    legendgroup='simulation'
+                ),
+                row=row_idx, col=col_idx
+            )
+
+            # Add ±5% confidence band if data_points provided
+            if data_points:
+                # Add experimental data points if they exist for this feature
+                if feature in data_points and data_points[feature]:
+                    data_times = [float(dp['time']) for dp in data_points[feature]]
+                    data_values = [float(dp['value']) for dp in data_points[feature]]
+                    
+                    # Calculate ±SEM error bars
+                    data_values_array = np.array(data_values)
+                    error_values = data_values_array * (data_sem / 100.0)
+                    
+                    # Add experimental data points with error bars
+                    fig.add_trace(
+                        go.Scatter(
+                            x=data_times,
+                            y=data_values,
+                            mode='markers',
+                            name=f'Experimental data (±{data_sem}%)',
+                            marker=dict(size=10, color='red', symbol='circle'),
+                            error_y=dict(
+                                type='data',
+                                array=error_values,
+                                visible=True,
+                                color='rgba(255, 0, 0, 0.6)',
+                                thickness=2
+                            ),
+                            showlegend=(idx == 0),
+                            legendgroup='data'
+                        ),
+                        row=row_idx, col=col_idx
+                    )
+            
+            # Add drink duration rectangles if provided
+            if drink_starts and drink_lengths:
+                # Store drink info for later layout update (we'll set fixed y-positions after layout)
+                # For now, use a relative position that will be adjusted in layout
+                # Get data range for positioning
+                y_data = sim_results[feature].dropna()
+                y_min_data = y_data.min() if len(y_data) > 0 else 0
+                y_max_data = y_data.max() if len(y_data) > 0 else 1
+                yrange = y_max_data - y_min_data if (y_max_data - y_min_data) != 0 else 1.0
+                
+                # Position drinks at bottom 4% of visible range
+                timeline_height = 0.04 * yrange
+                y0 = y_min_data - 0.06 * yrange
+                y1 = y0 + timeline_height
+                
+                # Add colored rectangles for each drink
+                colors = ['rgba(255,127,0,0.4)', 'rgba(127,0,255,0.35)', 'rgba(0,127,255,0.35)', 'rgba(0,200,0,0.35)']
+                for i, start in enumerate(drink_starts):
+                    dur_min = drink_lengths[i] if i < len(drink_lengths) else 0
+                    end = start + (dur_min / 60.0)
+                    color = colors[i % len(colors)]
+                    
+                    # Add rectangle for drink duration
+                    fig.add_shape(
+                        type='rect', x0=start, x1=end, y0=y0, y1=y1, fillcolor=color, line=dict(width=0),
+                        row=row_idx, col=col_idx
+                    )
+            
+            # Update axes
+            fig.update_xaxes(title_text='Time (h)', row=row_idx, col=col_idx)
+            fig.update_yaxes(title_text=feature, row=row_idx, col=col_idx)
+    
+    # Update layout
+    fig.update_layout(
+        height=400 * n_rows,
+        hovermode='closest',
+        margin=dict(l=50, r=50, t=100, b=60),
+        showlegend=bool(uncert_data) or bool(data_points)
+    )
+    
+    return fig

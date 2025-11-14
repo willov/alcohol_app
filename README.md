@@ -1,10 +1,34 @@
-# A physiologically based digital twin for alcohol consumption – predicting real-life drinking responses and long-term plasma PEth
+# A physiologically based digital twin for alcohol consumption
+
+This repository contains the code for the eHealth application prototype featuring two published works:
+
+## Paper 1: A Physiologically Based Digital Twin for Alcohol Consumption – Predicting Real-life Drinking Responses and Long-term Plasma PEth
 
 <a href="https://doi.org/10.1038/s41746-024-01089-6">
 	<img src="./article-frontpage.png" alt="article-frontpage" width="50%">
 </a>
 
-This repository contains the code for the eHealth application prototype developed in the publication titled \"A physiologically based digital twin for alcohol consumption – predicting real-life drinking responses and long-term plasma PEth\", [published in npj Digital Medicine](https://doi.org/10.1038/s41746-024-01089-6).
+The first publication, titled "A physiologically based digital twin for alcohol consumption – predicting real-life drinking responses and long-term plasma PEth", is [published in npj Digital Medicine](https://doi.org/10.1038/s41746-024-01089-6).
+
+This work presents a detailed mechanistic model for alcohol dynamics, including gastric emptying, that can explain differences in alcohol absorption based on drink types and anthropometric characteristics. The model includes predictions for long-term clinical markers like phosphatidylethanol (PEth).
+
+**Interactive demonstrations include:**
+- Alcohol dynamics - Simulate drinks and observe BAC/breath alcohol
+- Anthropometric differences in PEth - Explore how body characteristics affect PEth levels
+- Drink type impact on PEth - Compare different drink types
+- Evaluating reported PEth levels - Validate self-reported consumption against measurements
+
+## Paper 2: Predicting Real-life Drinking Scenarios through a Physiological Digital Twin Incorporating Secondary Alcohol Markers  
+
+The second work extends the model to include secondary alcohol metabolites: ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC). These biomarkers are important for detecting recent alcohol consumption and have different time profiles than blood alcohol.
+
+**Interactive demonstrations include:**
+- Alcohol secondary metabolites dynamics - Simulate and observe EtG, EtS, and UAC profiles
+- Plausibility of behavior - Evaluate claimed drinking patterns against measured biomarker data
+
+---
+
+## Running the application
 
 The prototype is hosted at [https://alcohol.streamlit.app](https://alcohol.streamlit.app), but can also be run locally. To do that, install the required packages listed in the `pyproject.toml` file: 
 
@@ -21,6 +45,8 @@ The app was tested with Python 3.13, with the dependencies listed in `pyproject.
 ## How to cite
 
 If you use this application, please cite as:
+
+### Paper 1
 
 ```text
 Podéus H, Simonsson C, Nasr P, Ekstedt M, Kechagias S, Lundberg P, Lövfors W, Cedersund G (2024) A physiologically-based digital twin for alcohol consumption — predicting real-life drinking responses and long-term plasma PEth. npj Digital Medicine 7:112. https://doi.org/10.1038/s41746-024-01089-6
@@ -43,3 +69,7 @@ Or use the following bibtex entry:
 	pages = {112},
 }
 ```
+
+### Paper 2
+
+citation coming soon

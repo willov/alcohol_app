@@ -113,23 +113,23 @@ event_kcal2 = le(Kcal_Solid, 0), Kcal_Solid, 0, max_Kcal_Solid, 0, EtOH_Pool, 0
 ########## OUTPUTS
 
 ########## INPUTS
-EtOH_conc           = EtOH_conc           @ 0
-vol_drink_per_time  = vol_drink_per_time  @ 0
-kcal_liquid_per_vol = kcal_liquid_per_vol @ 0
-kcal_solid          = kcal_solid          @ 0
-drink_length = drink_length @ 0
+EtOH_conc           = EtOH_conc           @ 0       // [%]
+vol_drink_per_time  = vol_drink_per_time  @ 0       // [L/min]
+kcal_liquid_per_vol = kcal_liquid_per_vol @ 0       // [kcal/L]
+kcal_solid          = kcal_solid          @ 0       // [kcal]
+drink_length        = drink_length        @ 0       // [min]
 
-sex                 = sex                 @ 1       // male=1, female=0
-weight              = weight              @ 104     // Kg
-height              = height              @ 1.85    // m
+sex                 = sex                 @ 1       // [male=1, female=0]
+weight              = weight              @ 104     // [kg]
+height              = height              @ 1.85    // [m]
 
 ########## FEATURES
 
-Blood alcohol concentration (mg/dL) = Blood_Conc   // mg/dL
-Blood alcohol concentration (‰) = Blood_Conc/100   // mg/dL
-Acetate in plasma (mM) = Plasma_acetate/10.2                              //mg/dL --> mM
-Breath alcohol concentration (g/210L) = (0.840*(Blood_Conc/1000) + 0.00367)*210                // BrAC [g/210L = 0.840*BAC[g/dL]+0.00367 => 1e-3*g/dL]
-Breath alcohol concentration (g/L) = ( 0.840*(Blood_Conc/1000) + 0.00367 )    // g/L [g/210L * 1/210 * 2100 = g/L * 2100 = g/L * scale] // 10 cause Blood_Conc is in /dL and needs to be scaled up to /L
-Gastric volume (mL) = Vol_Stomach*100
-PEth (ng/mL) = PEth
+Blood alcohol concentration (mg/dL)   = Blood_Conc                              [mg/dL]
+Blood alcohol concentration (‰)       = Blood_Conc/100                          [mg/dL]
+Acetate in plasma (mM)                = Plasma_acetate/10.2                     [mM]
+Breath alcohol concentration (g/210L) = (0.840*(Blood_Conc/1000) + 0.00367)*210 [g/210L]
+Breath alcohol concentration (g/L)    = ( 0.840*(Blood_Conc/1000) + 0.00367 )   [g/L]
+Gastric volume (mL)                   = Vol_Stomach*100                         [mL]
+PEth (ng/mL)                          = PEth                                    [ng/mL]
 

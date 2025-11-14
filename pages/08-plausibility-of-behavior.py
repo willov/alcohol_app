@@ -1,0 +1,440 @@
+import os
+import json
+import numpy as np
+import streamlit as st
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from sidebar_config import setup_sidebar
+from functions.ui_helpers import (
+    setup_sund_package, setup_model, simulate,
+    seed_new_items,
+    lock_all, enforce_minimum_time, build_stimulus_dict,
+    create_multi_feature_plot, get_drink_specs,
+    drink_selector_cards
+)
+
+# Setup sund and sidebar
+sund = setup_sund_package()
+setup_sidebar()
+
+# Setup the model
+model, model_features = setup_model('alcohol_model_2')
+
+# Helper functions for page 08
+def load_uncertainty(path="./results/UC_PPL_alcohol_model_individual.json"):
+    """Load uncertainty data from PPL results JSON file."""
+    if not os.path.exists(path):
+        return None
+    with open(path, 'r', encoding='utf-8') as f_in:
+        data = json.load(f_in)
+    return data
+
+# Start the app
+
+st.markdown("# Plausibility of behavior of secondary alcohol metabolites")
+st.write("Plausibility of secondary alcohol metabolites following claimed alcohol consumption")
+st.markdown("""Using the model, we predict the plausibility of the behavior of secondary alcohol metabolites - including ethyl glucuronide (EtG), ethyl sulphate (EtS), and urine alcohol concentration (UAC). 
+
+Below, a showcase is presented - including a set of sampled data points and a claimed consumption of two alcoholic drinks. The model is used to simulate the expected time course of the secondary metabolites, and compare these to the sampled data points. You can choose between a man or a woman.
+""")
+
+# Load uncertainty and data
+uncert_data = load_uncertainty("./results/UC_PPL_alcohol_model_individual.json")
+with open("./data/data_hip_flask_scenarios.json", 'r', encoding='utf-8') as f_scen:
+    data_scenarios = json.load(f_scen)
+
+# === SHOWCASE SECTION ===
+st.header("Showcase: model uncertainty vs measured data")
+st.markdown("This section displays the model's prediction uncertainty compared to actual measured data from two controlled experiments (for either a man or a woman).")
+
+# Sex toggle for showcase
+def _on_sex_change():
+    # Clear drink-related session state so defaults get recalculated
+    for clr_idx in range(5):  # Clear up to 5 drinks
+        clr_key_time = f"drink_time_08_{clr_idx}"
+        if clr_key_time in st.session_state:
+            del st.session_state[clr_key_time]
+        clr_lock_key = f"drink_time_locked_08_{clr_idx}"
+        if clr_lock_key in st.session_state:
+            del st.session_state[clr_lock_key]
+    # Clear anthropometric session state so defaults get recalculated
+    for key in ["weight_08", "height_08", "age_08"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    # Clear simulation results so they get recalculated
+    if 'sim_results' in st.session_state:
+        del st.session_state['sim_results']
+    if 'demo_anthropometrics' in st.session_state:
+        del st.session_state['demo_anthropometrics']
+    st.rerun()
+
+showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="showcase_sex", on_change=_on_sex_change)
+
+
+# Create 4-panel plot (BAC, UAC, EtG, EtS) - Interactive Plotly version
+st.subheader(f"Model prediction of wine + vodka scenario ({showcase_sex})".capitalize())
+
+# Mapping from display names to data keys
+display_to_data_key = {
+    "Blood alcohol concentration (mg/dL)": "EtOH",
+    "Urine alcohol concentration (mg/dL)": "UAC",
+    "Ethyl glucuronide (mg/dL)": "EtG",
+    "Ethyl sulphate (mg/dL)": "EtS"
+}
+
+features_to_plot = [
+    "Blood alcohol concentration (mg/dL)", 
+    "Urine alcohol concentration (mg/dL)", 
+    "Ethyl glucuronide (mg/dL)", 
+    "Ethyl sulphate (mg/dL)"
+]
+feature_labels = ["BAC", "UAC", "EtG", "EtS"]
+feature_ylabels = ["mg/dL", "mg/dL", "", ""]
+
+# Color scheme matching the manuscript
+if showcase_sex == "Man":
+    model_color = '#FF7F00'  # Orange
+else:
+    model_color = '#FF007D'  # Pink
+
+# Create subplots
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=feature_labels,
+    horizontal_spacing=0.15,
+    vertical_spacing=0.15
+)
+
+for idx, (feat, label, ylabel) in enumerate(zip(features_to_plot, feature_labels, feature_ylabels)):
+    row_idx = (idx // 2) + 1
+    col_idx = (idx % 2) + 1
+    
+    # Get the data key for this feature
+    data_key = display_to_data_key.get(feat, feat)
+    
+    # Get plotting_info from data if available
+    plot_info = {}
+    if showcase_sex in data_scenarios:
+        obs_data = data_scenarios[showcase_sex].get('Observables', {})
+        if data_key in obs_data:
+            plot_info = obs_data[data_key].get('plotting_info', {})
+    
+    # Plot uncertainty band
+    if uncert_data and showcase_sex in uncert_data:
+        if data_key in uncert_data[showcase_sex]:
+            feat_data = uncert_data[showcase_sex][data_key]
+            time = np.array(feat_data['Time']) / 60.0  # Convert minutes to hours
+            max_val = np.array(feat_data['Max'])
+            min_val = np.array(feat_data['Min'])
+            
+            # Add uncertainty band
+            fig.add_trace(
+                go.Scatter(
+                    x=list(time) + list(reversed(time)),
+                    y=list(max_val) + list(reversed(min_val)),
+                    fill='toself',
+                    fillcolor=f'rgba({int(model_color[1:3], 16)}, {int(model_color[3:5], 16)}, {int(model_color[5:7], 16)}, 0.25)',
+                    line=dict(color='rgba(255,255,255,0)'),
+                    hoverinfo='skip',
+                    showlegend=(idx == 0),
+                    name='Model uncertainty',
+                    legendgroup='uncertainty'
+                ),
+                row=row_idx, col=col_idx
+            )
+
+    # Plot measured data points
+    if showcase_sex in data_scenarios:
+        obs_data = data_scenarios[showcase_sex]['Observables']
+        if data_key in obs_data:
+            time_data = obs_data[data_key]['Time']
+            mean_data = obs_data[data_key]['Mean']
+            # Filter out NaN values
+            valid_idx = [i for i, val in enumerate(mean_data) if not (isinstance(val, float) and np.isnan(val))]
+            time_valid = [time_data[i] / 60.0 for i in valid_idx]  # Convert minutes to hours
+            mean_valid = [mean_data[i] for i in valid_idx]
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=time_valid,
+                    y=mean_valid,
+                    mode='markers',
+                    marker=dict(color='black', size=6),
+                    hoverinfo='x+y',
+                    showlegend=(idx == 0),
+                    name='Data',
+                    legendgroup='data'
+                ),
+                row=row_idx, col=col_idx
+            )
+    
+    # Update axes with plotting info
+    xlim = plot_info.get('xlim', [0, 900])
+    xlim = [x / 60.0 for x in xlim]
+    ylim = plot_info.get('ylim')
+    
+    fig.update_xaxes(title_text='Time (hours)', range=xlim, row=row_idx, col=col_idx)
+    fig.update_yaxes(
+        title_text=plot_info.get('ylabel', ylabel if ylabel else ''),
+        row=row_idx, col=col_idx
+    )
+    if ylim:
+        fig.update_yaxes(range=ylim, row=row_idx, col=col_idx)
+
+# Update layout
+fig.update_layout(
+    height=900,
+    hovermode='closest',
+    margin=dict(l=50, r=50, t=100, b=60)
+)
+
+st.plotly_chart(fig, use_container_width=True, key="showcase_plot")
+
+# Add drink timeline visualization
+if showcase_sex == "Man":
+    st.markdown("**Drink timeline:** Wine at t=[0, 0.25, 0.5, 0.75] h | Vodka at t=[5] h")
+else:
+    st.markdown("**Drink timeline:** Wine at t=[0, 0.25, 0.5, 0.75] h | Vodka at t=[2] h")
+st.divider()
+
+# === INTERACTIVE DEMO SECTION ===
+st.header("Interactive demo: simulate a custom scenario")
+st.markdown("Specify a custom drinking pattern and anthropometric characteristics to simulate alcohol kinetics. The simulation will run for the same duration as the model uncertainty data (~24 hours), allowing full comparison of your scenario against the uncertainty bounds (no measured data shown in this section). This is a tool intended for exploration and educational purposes, where you are intended to investigate how different claimed drinking patterns and anthropometrics affect the predicted alcohol kinetics.")
+
+# Anthropometrics            
+st.subheader("Anthropometrics")
+
+st.write(f"**Sex:** {showcase_sex} (linked to showcase selection)")
+
+# Set defaults based on sex
+if showcase_sex == "Man":
+    default_weight = 106.6
+    default_height = 1.86
+    default_age = 28
+else:
+    default_weight = 62.7
+    default_height = 1.69
+    default_age = 22
+
+# Force update session state with new defaults
+st.session_state["weight_08"] = default_weight
+st.session_state["height_08"] = default_height
+st.session_state["age_08"] = default_age
+
+anthropometrics = {
+    "sex": float(showcase_sex.lower() in ["male", "man", "men", "boy", "1", "chap", "guy"]),
+    "weight": st.number_input("Weight (kg):", 0.0, 200.0, default_weight, 1.0, key="weight_08"),
+    "height": st.number_input("Height (m):", 0.0, 2.5, default_height, key="height_08"),
+    "age": st.number_input("Age (years):", 0, 120, default_age, key="age_08")
+}
+
+# Specifying the drinks
+st.divider()    
+st.subheader("Specifying the alcoholic drinks")
+
+drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="08", trigger_simulation_update=True, mark_update=True)
+
+# Setup meals (interactive)
+meal_times = []
+meal_kcals = []
+
+def _on_change_n_meals_08():
+    seed_new_items(
+        page="08", name="meals", n=st.session_state.get("n_meals_08", 0), default_start=12.0, step=6.0,
+        seed_key_template="{prefix}_time_{page}_{i}", lock_key_template="{prefix}_time_locked_{page}_{i}", key_prefix="meal"
+    )
+
+st.divider()
+
+st.subheader("Specifying the meals")
+
+n_meals = st.slider("Number of (solid) meals:", 0, 15, 1, key="n_meals_08", on_change=_on_change_n_meals_08)
+
+# Lock all / Unlock all controls for meals
+lm_a, lm_b = st.columns(2)
+if lm_a.button("Lock all meals", key="lock_all_meals_08"):
+    lock_all(page="08", what="meal", n=n_meals, locked=True)
+if lm_b.button("Unlock all meals", key="unlock_all_meals_08"):
+    lock_all(page="08", what="meal", n=n_meals, locked=False)
+
+start_time_meal = 12.0
+
+def _on_change_meal_time_08(index):
+    # Enforce that this meal's time is not before the previous meal's time + 10 minutes
+    enforce_minimum_time(page="08", what="meal", index=index, min_gap=10.0/60.0)  # 10 minutes in hours
+    # Validate that all subsequent meals still respect their constraints
+    # Only adjust if they conflict, don't propagate arbitrary time changes
+    n_meals_current = st.session_state.get("n_meals_08", 0)
+    for j in range(index + 1, n_meals_current):
+        enforce_minimum_time(page="08", what="meal", index=j, min_gap=10.0/60.0)
+
+# Initialize meal defaults and locks for page 08
+for i in range(n_meals):
+    key_time = f"meal_time_08_{i}"
+    lock_key = f"meal_time_locked_08_{i}"
+    if key_time not in st.session_state:
+        st.session_state[key_time] = start_time_meal + i * 6.0
+    if lock_key not in st.session_state:
+        st.session_state[lock_key] = False
+
+for meal_idx in range(n_meals):
+    col1, col2 = st.columns(2)
+    with col1:
+        meal_times.append(st.number_input("Time (h)", 0.0, 100.0, key=f"meal_time_08_{meal_idx}", on_change=_on_change_meal_time_08, args=(meal_idx,)))
+    lock_key = f"meal_time_locked_08_{meal_idx}"
+    st.checkbox("Lock", key=lock_key, help="Prevent auto-fill changes to this meal time")
+    with col2:
+        meal_kcals.append(st.number_input("kcal", 0.0, 10000.0, 500.0, 10.0, key=f"meal_kcals{meal_idx}"))
+    start_time_meal += 6
+
+if n_meals < 1.0:
+    st.divider()
+
+meal_times = [t+(30/60)*on for t in meal_times for on in [0,1]]
+meal_kcals = [0]+[m*on for m in meal_kcals for on in [1 , 0]]
+
+# Setup stimulation to the model using helper
+stim = build_stimulus_dict(
+    drink_times, drink_lengths, drink_concentrations, 
+    drink_volumes, drink_kcals, meal_times, meal_kcals
+)
+
+# Initialize session state for simulation results
+if 'sim_results' not in st.session_state:
+    st.session_state['sim_results'] = None
+if 'demo_anthropometrics' not in st.session_state:
+    st.session_state['demo_anthropometrics'] = None
+
+# Calculate simulation time based on uncertainty data duration
+# Get max time from uncertainty data (in minutes, convert to hours)
+max_uncert_time_hours = 0
+if uncert_data:
+    for scenario in uncert_data.values():
+        for feature_data in scenario.values():
+            if 'Time' in feature_data:
+                max_time = max(feature_data['Time']) / 60.0  # Convert minutes to hours
+                max_uncert_time_hours = max(max_uncert_time_hours, max_time)
+
+st.divider()
+st.markdown("### Simulation of your drink scenario vs target interval")
+
+# Auto-update simulation when drink/meal parameters change
+if st.session_state.get('_should_update_sim_08', False):
+    with st.spinner("Updating simulation..."):
+        first_drink_time = min(drink_times) if drink_times else 0.0
+        extra_time = max_uncert_time_hours
+        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
+        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+    st.session_state['_should_update_sim_08'] = False
+    st.rerun()
+
+# Display results if simulation has been run
+if st.session_state['sim_results'] is not None:
+    sim_results = st.session_state['sim_results']
+    demo_anthropometrics = st.session_state['demo_anthropometrics']
+    
+    # Define allowed features for page 08
+    allowed_features = [
+        "Blood alcohol concentration (mg/dL)", 
+        "Urine alcohol concentration (mg/dL)", 
+        "Ethyl glucuronide (mg/dL)", 
+        "Ethyl sulphate (mg/dL)"
+    ]
+    available_features = [f for f in allowed_features if f in model_features]
+    
+    if available_features:
+        # Determine which scenario to use for uncertainty based on sex
+        demo_scenario = "Man" if demo_anthropometrics["sex"] == 1.0 else "Woman"
+        demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
+        
+        # Map feature names (model uses different names)
+        feature_map = {
+            "Blood alcohol concentration (mg/dL)": "EtOH", 
+            "Urine alcohol concentration (mg/dL)": "UAC", 
+            "Ethyl glucuronide (mg/dL)": "EtG", 
+            "Ethyl sulphate (mg/dL)": "EtS"
+        }
+
+        # Adjust sim_results time to start at 0 for plotting against uncertainty
+        sim_df = sim_results.copy()
+        sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
+        
+        # Adjust drink times to start at 0 (relative to first drink)
+        first_drink_time = min(drink_times) if drink_times else 0.0
+        drink_times_relative = [t - first_drink_time for t in drink_times]
+        
+        fig = create_multi_feature_plot(
+            sim_df, 
+            available_features,
+            uncert_data=uncert_data,
+            demo_scenario=demo_scenario,
+            demo_color=demo_color,
+            feature_map=feature_map,
+            drink_starts=drink_times_relative,
+            drink_lengths=drink_lengths,
+            uncertainty_legend="Target interval"
+        )
+        
+        if fig:
+            st.plotly_chart(fig, use_container_width=True, key="plot_08_multi")
+
+            # === UNCERTAINTY RANGE ASSESSMENT ===
+            st.markdown("#### Agreement with target interval assessment")
+            
+            # Get simulation times in hours
+            sim_times = sim_df['Time'].values
+            
+            # Process each selected feature for uncertainty check
+            all_within_bounds = []
+            
+            for feature in available_features:
+                data_key = display_to_data_key.get(feature, feature)
+                
+                if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
+                    continue
+                
+                if feature not in sim_df.columns:
+                    continue
+                
+                sim_values = sim_df[feature].values
+                feat_data = uncert_data[demo_scenario][data_key]
+                
+                # Get uncertainty bounds
+                uncert_times = np.array(feat_data['Time']) / 60.0
+                uncert_max = np.array(feat_data['Max'])
+                uncert_min = np.array(feat_data['Min'])
+                sim_values = sim_df[feature].values
+                
+                # Interpolate uncertainty bounds at simulation times
+                interpolated_max = np.interp(sim_times, uncert_times, uncert_max)
+                interpolated_min = np.interp(sim_times, uncert_times, uncert_min)
+                
+                # Check if simulation is within bounds for each time point
+                within_bounds = (sim_values >= interpolated_min) & (sim_values <= interpolated_max)
+                
+                # Calculate percentage of points within bounds
+                num_within = np.sum(within_bounds)
+                total_points = len(within_bounds)
+                percentage_within = (num_within / total_points) * 100 if total_points > 0 else 0
+                
+                # Display assessment for this feature
+                if percentage_within >= 95.0:
+                    st.success(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="✅")
+                else:
+                    st.error(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="❌")
+
+                all_within_bounds.extend(within_bounds.tolist())
+            
+            # Overall success message if all features and timepoints are within bounds
+            if all_within_bounds and len(all_within_bounds) > 0 and all(all_within_bounds):
+                st.success("**All simulated features are within the model uncertainty bounds!**", icon="🎉")
+                
+        
+    else:
+        st.info("Select at least one feature to plot.")
+else:
+    if not drink_times:
+        st.warning("Add at least one drink to enable simulation.")
+    else:
+        st.info("Click the button above to run the simulation with your chosen parameters.")

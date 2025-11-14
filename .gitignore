@@ -5,3 +5,4 @@
 *.asv
 .venv/
 custom_package/
+__pycache__/
