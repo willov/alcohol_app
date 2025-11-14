@@ -180,11 +180,14 @@ def build_stimulus_dict(drink_times, drink_lengths, drink_concentrations,
     drink_length = [0] + [t*on for t in drink_lengths for on in [1, 0]]
     t = [t + (l/60)*on for t, l in zip(drink_times, drink_lengths) for on in [0, 1]]
     
-    # BUGFIX: Add a small epsilon to the last time point if it's a whole number
-    # This prevents CVODE solver issues when the last stimulus time is exactly a whole hour
-    # (e.g., when drink duration is exactly 60 minutes)
-    if len(t) > 0 and t[-1] == int(t[-1]):
-        t[-1] = t[-1] + 1e-6
+    # BUGFIX: Add a small epsilon to any time points that are exact integers or half-integers
+    # This prevents CVODE solver issues when stimulus times align with whole hours or half-hours
+    epsilon = 1e-6
+    for i in range(len(t)):
+        # Check if close to an integer or half-integer (within floating point precision)
+        remainder = t[i] % 0.5
+        if abs(remainder) < 1e-9 or abs(remainder - 0.5) < 1e-9:
+            t[i] = t[i] + epsilon
     
     stim = {
         "EtOH_conc": {"t": t, "f": EtOH_conc},
