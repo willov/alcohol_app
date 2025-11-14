@@ -200,6 +200,7 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
     """Render drink selector cards for adding/editing/removing drinks.
     
     - page_number: string page identifier
+    - drink_offset: default time offset between drinks when they are found overlapping in hours  (default 0.25 = 15 minutes)
     - trigger_simulation_update: if True, defines a function to trigger simulation update
     - mark_update: if True, defines a function to mark that an update is needed
     
@@ -212,6 +213,89 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
     def _mark_update():
         if mark_update:
             st.session_state[f'_should_update_sim_{page_number}'] = True
+    
+    def _on_change_drink_time(card_id):
+        """Validate that drinks don't overlap by checking all drinks in chronological order.
+        
+        When user manually changes time to a valid position, allow it.
+        When user creates an overlap, auto-correct with default offset and propagate adjustments.
+        """
+        cards = st.session_state[f'drink_cards_{page_number}']
+        
+        # First update the card that triggered this callback with its new widget value
+        changed_card = next((c for c in cards if c['id'] == card_id), None)
+        if changed_card:
+            widget_key = f"drink_card_time_{page_number}_{card_id}"
+            if widget_key in st.session_state:
+                changed_card['time'] = st.session_state[widget_key]
+        
+        # Sort all cards by time (now includes the updated value)
+        sorted_cards = sorted(cards, key=lambda c: c['time'])
+        
+        # Default offset between drinks (15 minutes = 0.25 hours)
+        default_offset = drink_offset
+        
+        # Go through each drink in order and ensure it starts after the previous one ends
+        # Keep iterating until no more adjustments are needed (to handle cascading overlaps)
+        max_iterations = len(sorted_cards)  # Prevent infinite loops
+        for iteration in range(max_iterations):
+            adjustments_made = False
+            for i in range(1, len(sorted_cards)):
+                current_card = sorted_cards[i]
+                prev_card = sorted_cards[i - 1]
+                prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
+                
+                # If drink overlaps, auto-correct with default offset
+                if current_card['time'] < prev_end_time:
+                    current_card['time'] = prev_end_time + default_offset
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = prev_end_time + default_offset
+                    adjustments_made = True
+            
+            # If no adjustments were made, we're done
+            if not adjustments_made:
+                break
+    
+    def _on_change_drink_length(card_id):
+        """Validate that drinks don't overlap when duration changes.
+        
+        When duration changes, only adjust if there's overlap (use default offset for correction).
+        Propagate adjustments to handle cascading overlaps.
+        """
+        cards = st.session_state[f'drink_cards_{page_number}']
+        
+        # First update the card that triggered this callback with its new widget value
+        changed_card = next((c for c in cards if c['id'] == card_id), None)
+        if changed_card:
+            widget_key = f"drink_card_length_{page_number}_{card_id}"
+            if widget_key in st.session_state:
+                changed_card['length'] = st.session_state[widget_key]
+        
+        # Sort all cards by time (using updated length values)
+        sorted_cards = sorted(cards, key=lambda c: c['time'])
+        
+        # Default offset between drinks (15 minutes = 0.25 hours)
+        default_offset = drink_offset
+        
+        # Go through each drink in order and ensure it doesn't overlap with previous
+        # Keep iterating until no more adjustments are needed (to handle cascading overlaps)
+        max_iterations = len(sorted_cards)  # Prevent infinite loops
+        for iteration in range(max_iterations):
+            adjustments_made = False
+            for i in range(1, len(sorted_cards)):
+                current_card = sorted_cards[i]
+                prev_card = sorted_cards[i - 1]
+                prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
+                
+                # Only adjust if there's an overlap
+                if current_card['time'] < prev_end_time:
+                    # When correcting overlap from duration change, use default offset
+                    current_card['time'] = prev_end_time + default_offset
+                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = prev_end_time + default_offset
+                    adjustments_made = True
+            
+            # If no adjustments were made, we're done
+            if not adjustments_made:
+                break
     if f'drink_cards_{page_number}' not in st.session_state:
         st.session_state[f'drink_cards_{page_number}'] = []
 
@@ -298,19 +382,28 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
                 st.rerun()
 
             # Second row: numeric fields
+            def _on_time_change_wrapper(cid=card['id']):
+                _on_change_drink_time(cid)
+                _mark_update()
+            
+            def _on_length_change_wrapper(cid=card['id']):
+                _on_change_drink_length(cid)
+                _mark_update()
+            
             c1, c2, c3, c4, c5 = st.columns(5)
-            card['time'] = c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_{page_number}_{card['id']}", on_change=_mark_update)
-            card['length'] = c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_{page_number}_{card['id']}", on_change=_mark_update)
-            card['abv'] = c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_{page_number}_{card['id']}", on_change=_mark_update)
-            card['volume'] = c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_{page_number}_{card['id']}", on_change=_mark_update)
-            card['kcal_per_l'] = c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_{page_number}_{card['id']}", on_change=_mark_update)
-    # Bottom utility actions
-    if st.session_state[f'drink_cards_{page_number}']:
-        sort_hint = st.button("Sort drinks by time", key=f"sort_drinks_time_{page_number}", help="Reorder cards chronologically if manual edits caused out-of-order display.")
-        if sort_hint:
-            st.session_state[f'drink_cards_{page_number}'] = sorted(st.session_state[f'drink_cards_{page_number}'], key=lambda c: c['time'])
-            st.rerun()
-
+            c1.number_input("Time (h)", 0.0, 100.0, value=float(card['time']), key=f"drink_card_time_{page_number}_{card['id']}", on_change=_on_time_change_wrapper)
+            c2.number_input("Length (min)", 0.0, 240.0, value=float(card['length']), step=1.0, key=f"drink_card_length_{page_number}_{card['id']}", on_change=_on_length_change_wrapper)
+            c3.number_input("ABV (%)", 0.0, 100.0, value=float(card['abv']), step=0.1, key=f"drink_card_abv_{page_number}_{card['id']}", on_change=_mark_update)
+            c4.number_input("Vol (L)", 0.0, 2.0, value=float(card['volume']), step=0.01, key=f"drink_card_volume_{page_number}_{card['id']}", on_change=_mark_update)
+            c5.number_input("kcal/L", 0.0, 600.0, value=float(card['kcal_per_l']), step=1.0, key=f"drink_card_kcal_{page_number}_{card['id']}", on_change=_mark_update)
+            
+            # Read updated values from session state (in case callbacks modified them)
+            card['time'] = st.session_state[f"drink_card_time_{page_number}_{card['id']}"]
+            card['length'] = st.session_state[f"drink_card_length_{page_number}_{card['id']}"]
+            card['abv'] = st.session_state[f"drink_card_abv_{page_number}_{card['id']}"]
+            card['volume'] = st.session_state[f"drink_card_volume_{page_number}_{card['id']}"]
+            card['kcal_per_l'] = st.session_state[f"drink_card_kcal_{page_number}_{card['id']}"]
+    
     # Build lists required for stimulus
     drink_times = [c['time'] for c in sorted_cards]
     drink_lengths = [c['length'] for c in sorted_cards]
