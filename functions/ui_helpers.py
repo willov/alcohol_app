@@ -248,16 +248,19 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
                 prev_card = sorted_cards[i - 1]
                 prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
                 
-                # If drink overlaps, auto-correct with default offset
-                if current_card['time'] < prev_end_time:
-                    current_card['time'] = prev_end_time + default_offset
-                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = prev_end_time + default_offset
+                # Only adjust if there's an overlap
+                while current_card['time'] < prev_end_time:
+                    # When correcting overlap from duration change, use default offset
+                    current_card['time'] += default_offset
                     adjustments_made = True
+                    
+                st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
             
             # If no adjustments were made, we're done
             if not adjustments_made:
                 break
-    
+
+
     def _on_change_drink_length(card_id):
         """Validate that drinks don't overlap when duration changes.
         
@@ -290,15 +293,17 @@ def drink_selector_cards(*,page_number, drink_offset=0.25, trigger_simulation_up
                 prev_end_time = prev_card['time'] + prev_card['length'] / 60.0  # Convert minutes to hours
                 
                 # Only adjust if there's an overlap
-                if current_card['time'] < prev_end_time:
+                while current_card['time'] <= prev_end_time:
                     # When correcting overlap from duration change, use default offset
-                    current_card['time'] = prev_end_time + default_offset
-                    st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = prev_end_time + default_offset
+                    current_card['time'] += default_offset
                     adjustments_made = True
+
+                st.session_state[f"drink_card_time_{page_number}_{current_card['id']}"] = current_card['time']
             
             # If no adjustments were made, we're done
             if not adjustments_made:
                 break
+
     if f'drink_cards_{page_number}' not in st.session_state:
         st.session_state[f'drink_cards_{page_number}'] = []
 
