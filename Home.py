@@ -40,9 +40,7 @@ If you use this application, please cite as:
 
 This extended model incorporates secondary metabolites (EtG, EtS) and urine alcohol concentration, highlighting their different time windows and utility for detecting recent drinking. The paper focuses on how these metabolites behave after typical drinking scenarios, and how the model can be used to assist in forensic interpretation, particularly in the context of drunk driving. The paper have been submitted for peer-review in November 2025.
 
-**Quick link paper 2:**
-
-- Paper 2: Secondary metabolites and plausibility checks ([open Paper 2 demos](secondary-metabolites))
+Additional information is available in the [*About* section](secondary-metabolites) for *Paper 2* in the sidebar.
 
 #### Citation
 
