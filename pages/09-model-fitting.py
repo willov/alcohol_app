@@ -245,6 +245,9 @@ extra_time = st.number_input("Time to simulate after last drink (h):", 0.0, 100.
 
 data_sem = st.number_input("Data uncertainty (%):", 0.1, 100.0, 5.0, 0.1, key="data_sem_09", help="Standard Error of the Mean tolerance for data points (±%)")
 
+# Validate and run the simulation 
+sim_results = None
+
 # Validate drink arrays before building stimulus dict
 if len(drink_times) > 0 and len(drink_lengths) > 0:
     # Check all arrays have same length
@@ -268,27 +271,25 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
         with st.spinner("Running simulation..."):
             try:
                 sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
-                st.session_state['sim_results_09'] = sim_results
                 st.session_state['data_points_09'] = data_points
                 st.session_state['selected_features_09'] = selected_features
-                st.session_state['anthropometrics_09'] = anthropometrics.copy()
             except Exception as e:
                 st.error(f"Simulation failed: {str(e)}")
 else:
     st.warning("Please configure at least one drink for the simulation to be run.")
+    st.session_state['_should_update_sim_09'] = False
+
 
 # Auto-update simulation when drink/meal parameters change
 if st.session_state.get('_should_update_sim_09', False):
     with st.spinner("Updating simulation..."):
         first_drink_time = min(drink_times) if drink_times else 0.0
-        st.session_state['sim_results_09'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-        st.session_state['anthropometrics_09'] = anthropometrics.copy()
+        sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
     st.session_state['_should_update_sim_09'] = False
     st.rerun()
 
 # Display results if simulation has been run
-if drink_times and 'sim_results_09' in st.session_state:
-    sim_results = st.session_state['sim_results_09']
+if drink_times and sim_results is not None:
     data_points_dict = st.session_state['data_points_09']
     selected_features = st.session_state['selected_features_09']
     

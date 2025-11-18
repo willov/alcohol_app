@@ -51,23 +51,19 @@ st.markdown("This section displays the model's prediction uncertainty compared t
 # Sex toggle for showcase
 def _on_sex_change():
     # Clear drink-related session state so defaults get recalculated
-    for clr_idx in range(5):  # Clear up to 5 drinks
-        clr_key_time = f"drink_time_08_{clr_idx}"
-        if clr_key_time in st.session_state:
-            del st.session_state[clr_key_time]
-        clr_lock_key = f"drink_time_locked_08_{clr_idx}"
-        if clr_lock_key in st.session_state:
-            del st.session_state[clr_lock_key]
+    for key in list(st.session_state.keys()):
+        if key.startswith("drink_") and key.endswith("_08"):
+            del st.session_state[key]
+
     # Clear anthropometric session state so defaults get recalculated
     for key in ["weight_08", "height_08", "age_08"]:
         if key in st.session_state:
             del st.session_state[key]
+
     # Clear simulation results so they get recalculated
-    if 'sim_results' in st.session_state:
-        del st.session_state['sim_results']
-    if 'demo_anthropometrics' in st.session_state:
-        del st.session_state['demo_anthropometrics']
-    st.rerun()
+    sim_results = None
+
+    # st.rerun()
 
 showcase_sex = st.selectbox("Select sex for showcase:", ["Man", "Woman"], key="showcase_sex", on_change=_on_sex_change)
 
@@ -235,6 +231,16 @@ st.subheader("Specifying the alcoholic drinks")
 
 drink_times, drink_lengths, drink_concentrations, drink_volumes, drink_kcals = drink_selector_cards(page_number="08", trigger_simulation_update=True, mark_update=True)
 
+# Validate the drinks
+if len(drink_times) > 0 and len(drink_lengths) > 0:
+    # Check all arrays have same length
+    if not (len(drink_times) == len(drink_lengths) == len(drink_concentrations) == len(drink_volumes) == len(drink_kcals)):
+        st.error("Drink configuration error: All drink parameter arrays must have the same length.")
+    else:
+        st.session_state['_should_update_sim_08'] = True
+else: 
+    st.session_state['_should_update_sim_08'] = False
+
 # Setup meals (interactive)
 meal_times = []
 meal_kcals = []
@@ -300,11 +306,8 @@ stim = build_stimulus_dict(
     drink_volumes, drink_kcals, meal_times, meal_kcals
 )
 
-# Initialize session state for simulation results
-if 'sim_results' not in st.session_state:
-    st.session_state['sim_results'] = None
-if 'demo_anthropometrics' not in st.session_state:
-    st.session_state['demo_anthropometrics'] = None
+# Initialize simulation results
+sim_results = None
 
 # Calculate simulation time based on uncertainty data duration
 # Get max time from uncertainty data (in minutes, convert to hours)
@@ -324,15 +327,11 @@ if st.session_state.get('_should_update_sim_08', False):
     with st.spinner("Updating simulation..."):
         first_drink_time = min(drink_times) if drink_times else 0.0
         extra_time = max_uncert_time_hours
-        st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-        st.session_state['demo_anthropometrics'] = anthropometrics.copy()
+        sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
     st.session_state['_should_update_sim_08'] = False
-    st.rerun()
 
 # Display results if simulation has been run
-if st.session_state['sim_results'] is not None:
-    sim_results = st.session_state['sim_results']
-    demo_anthropometrics = st.session_state['demo_anthropometrics']
+if sim_results is not None:
     
     # Define allowed features for page 08
     allowed_features = [
@@ -345,8 +344,8 @@ if st.session_state['sim_results'] is not None:
     
     if available_features:
         # Determine which scenario to use for uncertainty based on sex
-        demo_scenario = "Man" if demo_anthropometrics["sex"] == 1.0 else "Woman"
-        demo_color = '#FF7F00' if demo_anthropometrics["sex"] == 1.0 else '#FF007D'
+        demo_scenario = "Man" if anthropometrics["sex"] == 1.0 else "Woman"
+        demo_color = '#FF7F00' if anthropometrics["sex"] == 1.0 else '#FF007D'
         
         # Map feature names (model uses different names)
         feature_map = {
@@ -429,8 +428,6 @@ if st.session_state['sim_results'] is not None:
             # Overall success message if all features and timepoints are within bounds
             if all_within_bounds and len(all_within_bounds) > 0 and all(all_within_bounds):
                 st.success("**All simulated features are within the model uncertainty bounds!**", icon="🎉")
-                
-        
     else:
         st.info("Select at least one feature to plot.")
 else:
