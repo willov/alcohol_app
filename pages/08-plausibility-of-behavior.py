@@ -319,119 +319,116 @@ if uncert_data:
                 max_time = max(feature_data['Time']) / 60.0  # Convert minutes to hours
                 max_uncert_time_hours = max(max_uncert_time_hours, max_time)
 
-st.divider()
-st.markdown("### Simulation of your drink scenario vs target interval")
+if drink_times:
 
-# Auto-update simulation when drink/meal parameters change
-if st.session_state.get('_should_update_sim_08', False):
+    st.divider()
+    st.markdown("### Simulation of your drink scenario vs target interval")
+
+    # Auto-update simulation when drink/meal parameters change
     with st.spinner("Updating simulation..."):
         first_drink_time = min(drink_times) if drink_times else 0.0
         extra_time = max_uncert_time_hours
         sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
-    st.session_state['_should_update_sim_08'] = False
 
-# Display results if simulation has been run
-if sim_results is not None:
-    
-    # Define allowed features for page 08
-    allowed_features = [
-        "Blood alcohol concentration (mg/dL)", 
-        "Urine alcohol concentration (mg/dL)", 
-        "Ethyl glucuronide (mg/dL)", 
-        "Ethyl sulphate (mg/dL)"
-    ]
-    available_features = [f for f in allowed_features if f in model_features]
-    
-    if available_features:
-        # Determine which scenario to use for uncertainty based on sex
-        demo_scenario = "Man" if anthropometrics["sex"] == 1.0 else "Woman"
-        demo_color = '#FF7F00' if anthropometrics["sex"] == 1.0 else '#FF007D'
+    # Display results if simulation has been run
+    if sim_results is not None:
         
-        # Map feature names (model uses different names)
-        feature_map = {
-            "Blood alcohol concentration (mg/dL)": "EtOH", 
-            "Urine alcohol concentration (mg/dL)": "UAC", 
-            "Ethyl glucuronide (mg/dL)": "EtG", 
-            "Ethyl sulphate (mg/dL)": "EtS"
-        }
+        # Define allowed features for page 08
+        allowed_features = [
+            "Blood alcohol concentration (mg/dL)", 
+            "Urine alcohol concentration (mg/dL)", 
+            "Ethyl glucuronide (mg/dL)", 
+            "Ethyl sulphate (mg/dL)"
+        ]
+        available_features = [f for f in allowed_features if f in model_features]
+        
+        if available_features:
+            # Determine which scenario to use for uncertainty based on sex
+            demo_scenario = "Man" if anthropometrics["sex"] == 1.0 else "Woman"
+            demo_color = '#FF7F00' if anthropometrics["sex"] == 1.0 else '#FF007D'
+            
+            # Map feature names (model uses different names)
+            feature_map = {
+                "Blood alcohol concentration (mg/dL)": "EtOH", 
+                "Urine alcohol concentration (mg/dL)": "UAC", 
+                "Ethyl glucuronide (mg/dL)": "EtG", 
+                "Ethyl sulphate (mg/dL)": "EtS"
+            }
 
-        # Adjust sim_results time to start at 0 for plotting against uncertainty
-        sim_df = sim_results.copy()
-        sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
-        
-        # Adjust drink times to start at 0 (relative to first drink)
-        first_drink_time = min(drink_times) if drink_times else 0.0
-        drink_times_relative = [t - first_drink_time for t in drink_times]
-        
-        fig = create_multi_feature_plot(
-            sim_df, 
-            available_features,
-            uncert_data=uncert_data,
-            demo_scenario=demo_scenario,
-            demo_color=demo_color,
-            feature_map=feature_map,
-            drink_starts=drink_times_relative,
-            drink_lengths=drink_lengths,
-            uncertainty_legend="Target interval"
-        )
-        
-        if fig:
-            st.plotly_chart(fig, use_container_width=True, key="plot_08_multi")
+            # Adjust sim_results time to start at 0 for plotting against uncertainty
+            sim_df = sim_results.copy()
+            sim_df['Time'] = sim_df['Time'] - sim_df['Time'].min()
+            
+            # Adjust drink times to start at 0 (relative to first drink)
+            first_drink_time = min(drink_times) if drink_times else 0.0
+            drink_times_relative = [t - first_drink_time for t in drink_times]
+            
+            fig = create_multi_feature_plot(
+                sim_df, 
+                available_features,
+                uncert_data=uncert_data,
+                demo_scenario=demo_scenario,
+                demo_color=demo_color,
+                feature_map=feature_map,
+                drink_starts=drink_times_relative,
+                drink_lengths=drink_lengths,
+                uncertainty_legend="Target interval"
+            )
+            
+            if fig:
+                st.plotly_chart(fig, use_container_width=True, key="plot_08_multi")
 
-            # === UNCERTAINTY RANGE ASSESSMENT ===
-            st.markdown("#### Agreement with target interval assessment")
-            
-            # Get simulation times in hours
-            sim_times = sim_df['Time'].values
-            
-            # Process each selected feature for uncertainty check
-            all_within_bounds = []
-            
-            for feature in available_features:
-                data_key = display_to_data_key.get(feature, feature)
+                # === UNCERTAINTY RANGE ASSESSMENT ===
+                st.markdown("#### Agreement with target interval assessment")
                 
-                if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
-                    continue
+                # Get simulation times in hours
+                sim_times = sim_df['Time'].values
                 
-                if feature not in sim_df.columns:
-                    continue
+                # Process each selected feature for uncertainty check
+                all_within_bounds = []
                 
-                sim_values = sim_df[feature].values
-                feat_data = uncert_data[demo_scenario][data_key]
-                
-                # Get uncertainty bounds
-                uncert_times = np.array(feat_data['Time']) / 60.0
-                uncert_max = np.array(feat_data['Max'])
-                uncert_min = np.array(feat_data['Min'])
-                sim_values = sim_df[feature].values
-                
-                # Interpolate uncertainty bounds at simulation times
-                interpolated_max = np.interp(sim_times, uncert_times, uncert_max)
-                interpolated_min = np.interp(sim_times, uncert_times, uncert_min)
-                
-                # Check if simulation is within bounds for each time point
-                within_bounds = (sim_values >= interpolated_min) & (sim_values <= interpolated_max)
-                
-                # Calculate percentage of points within bounds
-                num_within = np.sum(within_bounds)
-                total_points = len(within_bounds)
-                percentage_within = (num_within / total_points) * 100 if total_points > 0 else 0
-                
-                # Display assessment for this feature
-                if percentage_within >= 95.0:
-                    st.success(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="✅")
-                else:
-                    st.error(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="❌")
+                for feature in available_features:
+                    data_key = display_to_data_key.get(feature, feature)
+                    
+                    if not uncert_data or demo_scenario not in uncert_data or data_key not in uncert_data[demo_scenario]:
+                        continue
+                    
+                    if feature not in sim_df.columns:
+                        continue
+                    
+                    sim_values = sim_df[feature].values
+                    feat_data = uncert_data[demo_scenario][data_key]
+                    
+                    # Get uncertainty bounds
+                    uncert_times = np.array(feat_data['Time']) / 60.0
+                    uncert_max = np.array(feat_data['Max'])
+                    uncert_min = np.array(feat_data['Min'])
+                    sim_values = sim_df[feature].values
+                    
+                    # Interpolate uncertainty bounds at simulation times
+                    interpolated_max = np.interp(sim_times, uncert_times, uncert_max)
+                    interpolated_min = np.interp(sim_times, uncert_times, uncert_min)
+                    
+                    # Check if simulation is within bounds for each time point
+                    within_bounds = (sim_values >= interpolated_min) & (sim_values <= interpolated_max)
+                    
+                    # Calculate percentage of points within bounds
+                    num_within = np.sum(within_bounds)
+                    total_points = len(within_bounds)
+                    percentage_within = (num_within / total_points) * 100 if total_points > 0 else 0
+                    
+                    # Display assessment for this feature
+                    if percentage_within >= 95.0:
+                        st.success(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="✅")
+                    else:
+                        st.error(f"**{feature}**: {percentage_within:.0f}% of timepoints within target interval", icon="❌")
 
-                all_within_bounds.extend(within_bounds.tolist())
-            
-            # Overall success message if all features and timepoints are within bounds
-            if all_within_bounds and len(all_within_bounds) > 0 and all(all_within_bounds):
-                st.success("**All simulated features are within the model uncertainty bounds!**", icon="🎉")
-    else:
-        st.info("Select at least one feature to plot.")
+                    all_within_bounds.extend(within_bounds.tolist())
+                
+                # Overall success message if all features and timepoints are within bounds
+                if all_within_bounds and len(all_within_bounds) > 0 and all(all_within_bounds):
+                    st.success("**All simulated features are within the model uncertainty bounds!**", icon="🎉")
+        else:
+            st.info("Select at least one feature to plot.")
 else:
-    if not drink_times:
-        st.warning("Add at least one drink to enable simulation.")
-    else:
-        st.info("Click the button above to run the simulation with your chosen parameters.")
+    st.warning("Add at least one drink to enable simulation.")

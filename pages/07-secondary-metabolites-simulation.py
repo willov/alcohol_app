@@ -103,33 +103,36 @@ stim = build_stimulus_dict(
 st.divider()
 
 # Plotting the drinks
-
 if drink_times:
-
     st.subheader("Plotting the time course given the alcoholic drinks specified")
     extra_time = st.number_input("Additional time to simulate after last drink (h):", 0.0, 100.0, 12.0, 0.1)
 
-    # Auto-update simulation when drink/meal parameters change
-    if st.session_state.get('_should_update_sim_07', False):
-        with st.spinner("Updating simulation..."):
-            first_drink_time = min(drink_times) if drink_times else 0.0
-            st.session_state['sim_results'] = simulate(model, anthropometrics, stim, extra_time=extra_time)
-            st.session_state['demo_anthropometrics'] = anthropometrics.copy()
-        st.session_state['_should_update_sim_07'] = False
-        st.rerun()
+    # Run simulation only when inputs change (flag set by UI helpers) else skip recompute
+    sim_results = None
+    with st.spinner("Running simulation..."):
+        sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
 
-    if st.session_state['sim_results'] is not None:
-        sim_results = st.session_state['sim_results']
+    # If no recompute requested this run, but we still need results to plot, compute once
+    if sim_results is None:
+        sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
 
-        selected_features = st.multiselect("Features of the model to plot", model_features, default=model_features[0:3] if model_features else [], key="plot_features_07")
+    selected_features = st.multiselect(
+        "Features of the model to plot",
+        model_features,
+        default=model_features[0:3] if model_features else [],
+        key="plot_features_07"
+    )
 
-        if selected_features:
-            fig = create_multi_feature_plot(sim_results, selected_features, drink_starts=drink_times, drink_lengths=drink_lengths)
-            if fig:
-                st.plotly_chart(fig, use_container_width=True, key=f"plot_07_multi")
-        else:
-            st.warning("Select at least one feature to plot.")
-    else: 
-        st.error("Simulation failed. Please check the inputs and try again.")
-elif not drink_times:
+    if selected_features:
+        fig = create_multi_feature_plot(
+            sim_results,
+            selected_features,
+            drink_starts=drink_times,
+            drink_lengths=drink_lengths
+        )
+        if fig:
+            st.plotly_chart(fig, use_container_width=True, key="plot_07_multi")
+    else:
+        st.warning("Select at least one feature to plot.")
+else:
     st.warning("Please specify at least one alcoholic drink to simulate.")

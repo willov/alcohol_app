@@ -275,136 +275,133 @@ if len(drink_times) > 0 and len(drink_lengths) > 0:
                 st.session_state['selected_features_09'] = selected_features
             except Exception as e:
                 st.error(f"Simulation failed: {str(e)}")
-else:
-    st.warning("Please configure at least one drink for the simulation to be run.")
-    st.session_state['_should_update_sim_09'] = False
 
 
-# Auto-update simulation when drink/meal parameters change
-if st.session_state.get('_should_update_sim_09', False):
+
+    # Auto-update simulation when drink/meal parameters change
     with st.spinner("Updating simulation..."):
         first_drink_time = min(drink_times) if drink_times else 0.0
         sim_results = simulate(model, anthropometrics, stim, extra_time=extra_time)
-    st.session_state['_should_update_sim_09'] = False
-    st.rerun()
 
-# Display results if simulation has been run
-if drink_times and sim_results is not None:
-    data_points_dict = st.session_state['data_points_09']
-    selected_features = st.session_state['selected_features_09']
-    
-    st.divider()
-    st.header("Comparison: simulation vs experimental Data")
-    
-    # Check if there's any data to compare
-    if not any(data_points_dict.values()):
-        st.warning("No data points to compare against.")
-    else:
-        # Create combined multi-feature plot with data points and drink patches
-        fig = create_multi_feature_plot(
-            sim_results, selected_features, 
-            data_points=data_points_dict,
-            drink_starts=drink_times,
-            drink_lengths=drink_lengths,
-            data_sem=data_sem
-        )
+    # Display results if simulation has been run
+    if drink_times and sim_results is not None:
+        data_points_dict = st.session_state['data_points_09']
+        selected_features = st.session_state['selected_features_09']
         
-        if fig:
-            st.plotly_chart(fig, use_container_width=True, key="multi_feature_plot_09")
+        st.divider()
+        st.header("Comparison: simulation vs experimental Data")
         
-        # Extract simulation data for fit analysis
-        sim_times = sim_results['Time'].values
-        
-        # Process each selected feature for fit analysis
-        all_fits = []
-        
-        for feature in selected_features:
-            data_points_plot = data_points_dict.get(feature, [])
-            
-            if not data_points_plot:
-                st.info(f"No data points for {feature}")
-                continue
-            
-            if feature not in sim_results.columns:
-                st.error(f"Feature '{feature}' not found in simulation results.")
-                continue
-            
-            sim_values = sim_results[feature].values
-            
-            # === TOLERANCE CHECK ===
-            st.markdown(f"#### Fit Analysis for {feature}")
-            
-            # Extract data times and values
-            data_times = [float(dp['time']) for dp in data_points_plot]
-            data_values = [float(dp['value']) for dp in data_points_plot]
-            
-            # Interpolate simulation values at data point times
-            interpolated_values = np.interp(data_times, sim_times, sim_values)
-            
-            # Check tolerance for each point
-            tolerance = data_sem / 100.0  # Convert percentage to decimal
-            fits = []
-            errors = []
-            
-            for i, data_point in enumerate(data_points_plot):
-                data_value = float(data_point['value'])
-                interp_value = interpolated_values[i]
-                
-                # Calculate relative error
-                if interp_value != 0:
-                    relative_error = abs(data_value - interp_value) / interp_value
-                else:
-                    relative_error = float('inf') if data_value != 0 else 0
-                
-                # Check if within tolerance
-                within_tolerance = relative_error <= tolerance
-                fits.append(within_tolerance)
-                errors.append(relative_error * 100)
-            
-            # Display results table
-            results_df = pd.DataFrame({
-                'Time (h)': data_times,
-                'Experimental': data_values,
-                'Simulated': interpolated_values,
-                f'Within ±{data_sem}%': ['✅' if fit else '❌' for fit in fits]
-            })
-            
-            st.dataframe(results_df, width='stretch', hide_index=True)
-            
-            # Overall assessment for this feature
-            num_within_tolerance = sum(fits)
-            total_points = len(fits)
-            
-            if all(fits):
-                st.success(
-                    f"✅ **{feature}: Drinking pattern describes data** ✅\n\n"
-                    f"All {total_points} data points are within ±{data_sem}% tolerance!"
-                )
-            else:
-                st.warning(
-                    f"**{feature}: Not quite there yet**\n\n"
-                    f"{num_within_tolerance}/{total_points} data points are within ±{data_sem}% tolerance."
-                )
-            
-            all_fits.extend(fits)
-        
-        # Overall success message if all features and points are within tolerance
-        if all_fits and len(all_fits) > 0 and all(all_fits):
-            st.success(
-                f"**OVERALL SUCCESS! Drinking pattern describes all data**\n\n"
-                f"All data points across all measured features are within ±{data_sem}% tolerance!"
+        # Check if there's any data to compare
+        if not any(data_points_dict.values()):
+            st.warning("No data points to compare against.")
+        else:
+            # Create combined multi-feature plot with data points and drink patches
+            fig = create_multi_feature_plot(
+                sim_results, selected_features, 
+                data_points=data_points_dict,
+                drink_starts=drink_times,
+                drink_lengths=drink_lengths,
+                data_sem=data_sem
             )
+            
+            if fig:
+                st.plotly_chart(fig, use_container_width=True, key="multi_feature_plot_09")
+            
+            # Extract simulation data for fit analysis
+            sim_times = sim_results['Time'].values
+            
+            # Process each selected feature for fit analysis
+            all_fits = []
+            
+            for feature in selected_features:
+                data_points_plot = data_points_dict.get(feature, [])
+                
+                if not data_points_plot:
+                    st.info(f"No data points for {feature}")
+                    continue
+                
+                if feature not in sim_results.columns:
+                    st.error(f"Feature '{feature}' not found in simulation results.")
+                    continue
+                
+                sim_values = sim_results[feature].values
+                
+                # === TOLERANCE CHECK ===
+                st.markdown(f"#### Fit Analysis for {feature}")
+                
+                # Extract data times and values
+                data_times = [float(dp['time']) for dp in data_points_plot]
+                data_values = [float(dp['value']) for dp in data_points_plot]
+                
+                # Interpolate simulation values at data point times
+                interpolated_values = np.interp(data_times, sim_times, sim_values)
+                
+                # Check tolerance for each point
+                tolerance = data_sem / 100.0  # Convert percentage to decimal
+                fits = []
+                errors = []
+                
+                for i, data_point in enumerate(data_points_plot):
+                    data_value = float(data_point['value'])
+                    interp_value = interpolated_values[i]
+                    
+                    # Calculate relative error
+                    if interp_value != 0:
+                        relative_error = abs(data_value - interp_value) / interp_value
+                    else:
+                        relative_error = float('inf') if data_value != 0 else 0
+                    
+                    # Check if within tolerance
+                    within_tolerance = relative_error <= tolerance
+                    fits.append(within_tolerance)
+                    errors.append(relative_error * 100)
+                
+                # Display results table
+                results_df = pd.DataFrame({
+                    'Time (h)': data_times,
+                    'Experimental': data_values,
+                    'Simulated': interpolated_values,
+                    f'Within ±{data_sem}%': ['✅' if fit else '❌' for fit in fits]
+                })
+                
+                st.dataframe(results_df, width='stretch', hide_index=True)
+                
+                # Overall assessment for this feature
+                num_within_tolerance = sum(fits)
+                total_points = len(fits)
+                
+                if all(fits):
+                    st.success(
+                        f"✅ **{feature}: Drinking pattern describes data** ✅\n\n"
+                        f"All {total_points} data points are within ±{data_sem}% tolerance!"
+                    )
+                else:
+                    st.warning(
+                        f"**{feature}: Not quite there yet**\n\n"
+                        f"{num_within_tolerance}/{total_points} data points are within ±{data_sem}% tolerance."
+                    )
+                
+                all_fits.extend(fits)
+            
+            # Overall success message if all features and points are within tolerance
+            if all_fits and len(all_fits) > 0 and all(all_fits):
+                st.success(
+                    f"**OVERALL SUCCESS! Drinking pattern describes all data**\n\n"
+                    f"All data points across all measured features are within ±{data_sem}% tolerance!"
+                )
 
-st.divider()
+    st.divider()
 
-st.markdown("""
-### Tips for Finding the Right Drinking Pattern:
+    st.markdown("""
+    ### Tips for Finding the Right Drinking Pattern:
 
-1. **Start simple**: Begin with a single drink and gradually add more if needed
-2. **Vary timing**: Adjust the timing of drinks to match peaks and valleys in the data
-3. **Adjust volume/strength**: Change drink volume and ABV to match data magnitude
-4. **Consider duration**: The drinking period affects the concentration profile
-5. **Use the lock feature**: Lock successful drink parameters when experimenting with others
+    1. **Start simple**: Begin with a single drink and gradually add more if needed
+    2. **Vary timing**: Adjust the timing of drinks to match peaks and valleys in the data
+    3. **Adjust volume/strength**: Change drink volume and ABV to match data magnitude
+    4. **Consider duration**: The drinking period affects the concentration profile
+    5. **Use the lock feature**: Lock successful drink parameters when experimenting with others
 
-Good luck!
-""")
+    Good luck!
+    """)
+else:
+    st.warning("Please configure at least one drink for the simulation to be run.")
